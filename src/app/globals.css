@@ -808,29 +808,12 @@ button, input, select, textarea {
   background: color-mix(in oklab, var(--result) 12%, var(--surface));
 }
 
-.auth-tabs {
-  display: flex;
-  gap: 8px;
-  margin: 22px 0 20px;
-}
-
-.auth-tabs button {
-  flex: 1;
-  min-height: 40px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface-2);
+.auth-switch-note {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
   color: var(--muted);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.auth-tabs button[data-on="true"] {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
 }
 
 .auth-name-row {

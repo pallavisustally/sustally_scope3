@@ -26,6 +26,12 @@ export function AuthBoard() {
     return "Sign in to Sustally";
   }, [mode]);
 
+  const showMode = (nextMode: Mode) => {
+    setMode(nextMode);
+    setError("");
+    setNotice("");
+  };
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBusy(true);
@@ -119,18 +125,7 @@ export function AuthBoard() {
                 : "Sign in with the email or phone and password from sign up."}
           </p>
 
-          {mode !== "forgot" ? (
-            <div className="auth-tabs" role="tablist" aria-label="Account">
-              <button type="button" role="tab" aria-selected={mode === "signin"} data-on={mode === "signin" ? "true" : "false"} onClick={() => { setMode("signin"); setError(""); setNotice(""); }}>
-                Sign in
-              </button>
-              <button type="button" role="tab" aria-selected={mode === "signup"} data-on={mode === "signup" ? "true" : "false"} onClick={() => { setMode("signup"); setError(""); setNotice(""); }}>
-                Sign up
-              </button>
-            </div>
-          ) : (
-            <div className="mt-6" />
-          )}
+          <div className="mt-6" />
 
           {error ? (
             <div className="form-alert" role="alert">
@@ -195,16 +190,33 @@ export function AuthBoard() {
           </button>
 
           {mode === "signin" ? (
-            <p className="mt-4 text-center text-[13px] text-[var(--muted)]">
-              <button type="button" className="auth-text-btn" onClick={() => { setMode("forgot"); setError(""); setNotice(""); }}>
-                Forgot password?
-              </button>
-            </p>
+            <>
+              <p className="mt-4 text-center text-[13px] text-[var(--muted)]">
+                <button type="button" className="auth-text-btn" onClick={() => showMode("forgot")}>
+                  Forgot password?
+                </button>
+              </p>
+              <p className="auth-switch-note">
+                New user?{" "}
+                <button type="button" className="auth-text-btn" onClick={() => showMode("signup")}>
+                  Sign up
+                </button>
+              </p>
+            </>
           ) : (
             <p className="mt-4 text-center text-[13px] text-[var(--muted)]">
-              <button type="button" className="auth-text-btn" onClick={() => { setMode("signin"); setError(""); setNotice(""); }}>
-                Back to sign in
-              </button>
+              {mode === "signup" ? (
+                <>
+                  Already have an account?{" "}
+                  <button type="button" className="auth-text-btn" onClick={() => showMode("signin")}>
+                    Sign in
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="auth-text-btn" onClick={() => showMode("signin")}>
+                  Back to sign in
+                </button>
+              )}
             </p>
           )}
         </form>
