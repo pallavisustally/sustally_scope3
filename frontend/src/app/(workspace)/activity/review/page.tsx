@@ -20,7 +20,7 @@ export default function ReviewPage() {
   return (
     <>
       <PageIntro
-        kicker="Selected categories"
+        kicker="Data collection"
         title="Review and calculate"
         body="Check inputs, methods, and emission factors. Calculate on this page uses the same engine as Results: activity data × emission factor, converted to tCO₂e."
       />

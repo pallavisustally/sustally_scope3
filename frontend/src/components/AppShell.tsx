@@ -9,7 +9,7 @@ import {
   NAV_MAIN,
   collectionTrail,
   findNavFamily,
-  includedCategories,
+  isCategoryDataPath,
   isGroupActive,
   isNavChildActive,
   isNavGroup,
@@ -20,14 +20,12 @@ import {
 import { BrandWordmark, ThemeToggle, UserChip } from "./Brand";
 import { NotificationBell } from "./NotificationBell";
 import { IconChevronDown, IconChevronLeft, IconHelp, NavGlyph } from "./NavIcons";
-import { useInventory } from "./InventoryProvider";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const editingCat = searchParams.get("cat");
-  const { state } = useInventory();
   const [collapsed, setCollapsed] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
@@ -43,40 +41,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return child ? [{ href: child.href, label: child.label }] : [];
   }, [editingCat, family, pathname]);
 
-  const sidebarNav = useMemo(() => {
-    const selected = includedCategories(state.categories);
-    return NAV_MAIN.map((item) => {
-      if (!isNavGroup(item) || item.id !== "activity") return item;
-      const hub = item.children[0];
-      const review = item.children[item.children.length - 1];
-      return {
-        ...item,
-        children: [
-          hub,
-          ...selected.map((category) => ({
-            href: `/activity?cat=${category.id}`,
-            label: category.name,
-            icon: "/activity",
-          })),
-          review,
-        ],
-      };
-    });
-  }, [state.categories]);
+  const sidebarNav = NAV_MAIN;
 
   useEffect(() => {
     if (!family) return;
     setOpenGroups((prev) => ({ ...prev, [family.id]: true }));
   }, [family]);
 
-  useEffect(() => {
-    if (includedCategories(state.categories).length === 0) return;
-    setOpenGroups((prev) => ({ ...prev, activity: true }));
-  }, [state.categories]);
-
   const closeMobile = () => setNavOpen(false);
 
   const toggleGroup = (group: NavGroup) => {
+    if (group.id === "activity") {
+      router.push(CATEGORY_DATA_HREF);
+      setOpenGroups((prev) => ({ ...prev, activity: true }));
+      closeMobile();
+      return;
+    }
     if (collapsed) {
       router.push(group.children[0].href);
       closeMobile();
@@ -202,7 +182,10 @@ function NavEntry({
     return <NavLink item={item} active={pathname === item.href} onNavigate={onNavigate} />;
   }
 
-  const groupActive = isGroupActive(pathname, item);
+  const groupActive =
+    (item.id === "activity" && isCategoryDataPath(pathname)) ||
+    isGroupActive(pathname, item) ||
+    item.children.some((child) => isLeafActive(pathname, child.href, cat));
 
   return (
     <div className="nav-group">
@@ -221,9 +204,7 @@ function NavEntry({
       </button>
       {open ? (
         <div className="nav-children">
-          {item.children
-            .filter((child) => child.href !== CATEGORY_DATA_HREF)
-            .map((child) => (
+          {item.children.map((child) => (
               <NavLink
                 key={child.href}
                 item={child}

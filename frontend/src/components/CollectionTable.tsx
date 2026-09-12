@@ -39,7 +39,7 @@ export function CollectionTable() {
     <>
       <PageIntro
         kicker="Data collection"
-        title="Selected categories"
+        title="Activity data"
         body="Open a category to choose a calculation method and enter activity data, then continue to emission factors. A tick appears after you save each step. Dashes mean that step is still empty."
       />
       <div className="panel collection-panel">

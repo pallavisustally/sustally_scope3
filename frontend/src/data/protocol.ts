@@ -274,14 +274,13 @@ export function isNavChildActive(pathname: string, href: string) {
 
 export function collectionTrail(pathname: string, cat: string | null) {
   if (pathname === "/activity/review") return [{ href: "/activity/review", label: "Review" }];
-  const hub = { href: CATEGORY_DATA_HREF, label: CATEGORY_DATA_LABEL };
   if (pathname === "/activity/factors") {
-    return [hub, { href: cat ? `/activity/factors?cat=${cat}` : "/activity/factors", label: "Emission Factors" }];
+    return [{ href: cat ? `/activity/factors?cat=${cat}` : "/activity/factors", label: "Emission Factors" }];
   }
   if ((pathname === "/activity" && cat) || pathname === "/activity/method") {
-    return [hub, { href: cat ? `/activity?cat=${cat}` : "/activity", label: "Activity Data" }];
+    return [{ href: cat ? `/activity?cat=${cat}` : "/activity", label: "Activity Data" }];
   }
-  return [hub];
+  return [];
 }
 
 export type NavLeaf = {
@@ -318,10 +317,7 @@ export const NAV_MAIN: NavItem[] = [
     id: "activity",
     label: "Data collection",
     icon: "/activity",
-    children: [
-      { href: "/activity", label: "Selected categories", icon: "/activity" },
-      { href: "/activity/review", label: "Review", icon: "/activity/review" },
-    ],
+    children: [{ href: "/activity/review", label: "Review", icon: "/activity/review" }],
   },
   {
     id: "reporting",
@@ -349,13 +345,14 @@ export const NAV_FOOTER: NavItem[] = [
 export function findNavFamily(pathname: string, trees: NavItem[][] = [NAV_MAIN, NAV_FOOTER]): NavGroup | undefined {
   for (const tree of trees) {
     for (const item of tree) {
-      if (isNavGroup(item) && item.children.some((child) => isNavChildActive(pathname, child.href))) {
-        return item;
-      }
+      if (!isNavGroup(item)) continue;
+      if (item.id === "activity" && isCategoryDataPath(pathname)) return item;
+      if (item.children.some((child) => isNavChildActive(pathname, child.href))) return item;
     }
   }
 }
 
 export function isGroupActive(pathname: string, group: NavGroup) {
+  if (group.id === "activity" && isCategoryDataPath(pathname)) return true;
   return group.children.some((child) => isNavChildActive(pathname, child.href));
 }
