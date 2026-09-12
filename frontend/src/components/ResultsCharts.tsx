@@ -24,13 +24,23 @@ function polar(cx: number, cy: number, r: number, angle: number) {
   return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)] as const;
 }
 
-function donutPath(cx: number, cy: number, inner: number, outer: number, start: number, end: number) {
+function donutArc(cx: number, cy: number, inner: number, outer: number, start: number, end: number) {
   const large = end - start > Math.PI ? 1 : 0;
   const [sx, sy] = polar(cx, cy, outer, start);
   const [ex, ey] = polar(cx, cy, outer, end);
   const [ix, iy] = polar(cx, cy, inner, end);
   const [jx, jy] = polar(cx, cy, inner, start);
   return `M ${sx} ${sy} A ${outer} ${outer} 0 ${large} 1 ${ex} ${ey} L ${ix} ${iy} A ${inner} ${inner} 0 ${large} 0 ${jx} ${jy} Z`;
+}
+
+function donutPath(cx: number, cy: number, inner: number, outer: number, start: number, end: number) {
+  const sweep = end - start;
+  // SVG cannot draw a 360° arc from a point to itself, so a 100% slice is two halves.
+  if (sweep >= Math.PI * 2 - 1e-6) {
+    const mid = start + Math.PI;
+    return `${donutArc(cx, cy, inner, outer, start, mid)} ${donutArc(cx, cy, inner, outer, mid, start + Math.PI)}`;
+  }
+  return donutArc(cx, cy, inner, outer, start, end);
 }
 
 function slicesFor(results: InventoryResult): Slice[] {

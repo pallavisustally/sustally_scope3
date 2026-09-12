@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
+  CATEGORY_DATA_HREF,
   NAV_FOOTER,
   NAV_MAIN,
   collectionTrail,
@@ -143,7 +144,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
         <main className="canvas">
-          {family ? (
+          {family && family.id !== "activity" ? (
             <nav className="family-tabs" aria-label={family.label}>
               {family.children.map((child) => (
                 <Link
@@ -220,15 +221,17 @@ function NavEntry({
       </button>
       {open ? (
         <div className="nav-children">
-          {item.children.map((child) => (
-            <NavLink
-              key={child.href}
-              item={child}
-              active={isLeafActive(pathname, child.href, cat)}
-              onNavigate={onNavigate}
-              nested
-            />
-          ))}
+          {item.children
+            .filter((child) => child.href !== CATEGORY_DATA_HREF)
+            .map((child) => (
+              <NavLink
+                key={child.href}
+                item={child}
+                active={isLeafActive(pathname, child.href, cat)}
+                onNavigate={onNavigate}
+                nested
+              />
+            ))}
         </div>
       ) : null}
     </div>
