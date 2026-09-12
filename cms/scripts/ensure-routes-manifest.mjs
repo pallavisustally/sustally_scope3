@@ -1,24 +1,29 @@
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const cmsRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const src = join(cmsRoot, ".next", "routes-manifest.json");
+const cmsNext = join(cmsRoot, ".next");
+const routesManifest = join(cmsNext, "routes-manifest.json");
 
-if (!existsSync(src)) {
-  console.warn("routes-manifest.json was not found; skipping Vercel manifest copy");
+if (!existsSync(cmsNext) || !existsSync(routesManifest)) {
+  console.warn("CMS .next output was not found; skipping Vercel manifest copy");
   process.exit(0);
 }
 
-const dests = [join(cmsRoot, ".next", "routes-manifest-deterministic.json")];
+function writeIfMissing(filePath, contents) {
+  if (existsSync(filePath)) return;
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, contents);
+}
+
+copyFileSync(routesManifest, join(cmsNext, "routes-manifest-deterministic.json"));
+writeIfMissing(join(cmsNext, "server", "pages-manifest.json"), "{}\n");
+writeIfMissing(join(cmsNext, "server", "pages-manifest-deterministic.json"), "{}\n");
 
 if (process.env.VERCEL) {
   const repoRootNext = join(cmsRoot, "..", ".next");
-  dests.push(join(repoRootNext, "routes-manifest.json"));
-  dests.push(join(repoRootNext, "routes-manifest-deterministic.json"));
-}
-
-for (const dest of dests) {
-  mkdirSync(dirname(dest), { recursive: true });
-  copyFileSync(src, dest);
+  mkdirSync(repoRootNext, { recursive: true });
+  cpSync(cmsNext, repoRootNext, { recursive: true, force: true });
+  console.log("Copied CMS .next output for Vercel Git finalization");
 }
