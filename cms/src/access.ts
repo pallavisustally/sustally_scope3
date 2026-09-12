@@ -1,10 +1,7 @@
 import type { Access, PayloadRequest } from "payload";
 
 function headerValue(req: PayloadRequest, name: string): string | null {
-  const headers = req.headers as { get?: (key: string) => string | null } & Record<string, string | string[] | undefined>;
-  if (typeof headers.get === "function") return headers.get(name);
-  const value = headers[name] ?? headers[name.toLowerCase()];
-  return Array.isArray(value) ? value[0] : value ?? null;
+  return req.headers.get(name);
 }
 
 export const isAdminOrInternal: Access = ({ req }) => {
