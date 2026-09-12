@@ -27,6 +27,8 @@ export type PublicUser = {
   phone: string;
 };
 
+export type AuthResult = { user: PublicUser } | { error: string };
+
 function publicUser(user: StoredUser): PublicUser {
   return {
     id: user.id,
@@ -85,7 +87,7 @@ export async function createUser(input: {
   email: string;
   phone: string;
   password: string;
-}) {
+}): Promise<AuthResult> {
   const firstName = input.firstName.trim();
   const lastName = input.lastName.trim();
   const email = normalizeEmail(input.email);
@@ -117,7 +119,7 @@ export async function createUser(input: {
   return { user: publicUser(user) };
 }
 
-export async function authenticate(identifier: string, password: string) {
+export async function authenticate(identifier: string, password: string): Promise<AuthResult> {
   const email = normalizeEmail(identifier);
   const phone = normalizePhone(identifier);
   const users = await readUsers();
@@ -160,7 +162,7 @@ export async function setResetToken(userId: string) {
   return token;
 }
 
-export async function resetPassword(token: string, password: string) {
+export async function resetPassword(token: string, password: string): Promise<AuthResult> {
   if (password.length < 8) return { error: "Password must be at least 8 characters." };
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const users = await readUsers();

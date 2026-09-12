@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     phone: body.phone || "",
     password: body.password || "",
   });
-  if ("error" in result && result.error) {
+  if (!("user" in result)) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
   const token = await createSessionToken(result.user.id);

@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Enter email or phone and password." }, { status: 400 });
   }
   const result = await authenticate(body.identifier, body.password);
-  if ("error" in result && result.error) {
+  if (!("user" in result)) {
     return NextResponse.json({ error: result.error }, { status: 401 });
   }
   const token = await createSessionToken(result.user.id);
