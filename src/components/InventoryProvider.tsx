@@ -1,92 +1,29 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
-import { blankValues, SAMPLE_ITEM_VALUES, SAMPLE_METHODS } from "@/data/fields";
-import { defaultFactorId, SCOPE3_CATEGORIES, type Inclusion } from "@/data/protocol";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { EMISSION_FACTORS, type EmissionFactor, type Inclusion } from "@/data/protocol";
+import { calculateInventory, type InventoryResult } from "@/lib/calculate";
+import { toCollectionDocs, type SavedInventorySummary } from "@/lib/collections-map";
+import { emptyInventory, makeEntry, makeItem, newSessionKey, SESSION_STORAGE_KEY } from "@/lib/inventory-defaults";
+import type { CategoryStep, InventoryState } from "@/lib/inventory-types";
+import type { AppNotification } from "@/lib/notifications";
+import { inventoryNotifications } from "@/lib/notifications";
 
-export type ActivityItem = {
-  id: string;
-  values: Record<string, string>;
-  factorId: string;
-};
-
-export type CategoryEntry = {
-  method: string;
-  items: ActivityItem[];
-};
-
-export type InventoryState = {
-  companyName: string;
-  industry: string;
-  year: string;
-  hq: string;
-  boundary: "operational" | "financial" | "equity";
-  categories: Record<number, Inclusion>;
-  justifications: Record<number, string>;
-  activeCategoryId: number;
-  entries: Record<number, CategoryEntry>;
-};
-
-function makeItem(categoryId: number, index = 1, values?: Record<string, string>): ActivityItem {
-  return {
-    id: `c${categoryId}-${index}`,
-    factorId: defaultFactorId(categoryId),
-    values: { ...blankValues(categoryId), ...values },
-  };
-}
-
-function makeEntry(categoryId: number): CategoryEntry {
-  return {
-    method: SAMPLE_METHODS[categoryId] ?? "average-data",
-    items: [makeItem(categoryId, 1, SAMPLE_ITEM_VALUES[categoryId])],
-  };
-}
-
-function buildEntries(): Record<number, CategoryEntry> {
-  return Object.fromEntries(SCOPE3_CATEGORIES.map((category) => [category.id, makeEntry(category.id)]));
-}
-
-const defaults: InventoryState = {
-  companyName: "Acme Corporation",
-  industry: "Manufacturing",
-  year: "2024",
-  hq: "Bengaluru, India",
-  boundary: "operational",
-  categories: {
-    1: "included",
-    2: "included",
-    3: "included",
-    4: "included",
-    5: "included",
-    6: "included",
-    7: "included",
-    8: "not_applicable",
-    9: "included",
-    10: "excluded",
-    11: "included",
-    12: "included",
-    13: "not_applicable",
-    14: "not_applicable",
-    15: "excluded",
-  },
-  justifications: {
-    8: "No upstream leased assets in the reporting year.",
-    10: "Sold products are final goods; no downstream processing.",
-    13: "The company does not lease assets to other entities.",
-    14: "The company does not operate a franchise model.",
-    15: "No investments outside the organizational boundary.",
-  },
-  activeCategoryId: 1,
-  entries: buildEntries(),
-};
+export type { ActivityItem, CategoryEntry, CategoryStep, InventoryState } from "@/lib/inventory-types";
 
 function firstIncluded(categories: Record<number, Inclusion>, fallback = 1) {
-  const match = SCOPE3_CATEGORIES.find((category) => categories[category.id] === "included");
-  return match?.id ?? fallback;
+  const match = Object.entries(categories).find(([, value]) => value === "included");
+  return match ? Number(match[0]) : fallback;
 }
 
-const InventoryContext = createContext<{
+type InventoryContextValue = {
   state: InventoryState;
+  factors: EmissionFactor[];
+  results: InventoryResult;
+  ready: boolean;
+  syncStatus: "idle" | "saving" | "saved" | "error";
+  savedInventories: SavedInventorySummary[];
+  notices: AppNotification[];
   setState: (patch: Partial<InventoryState>) => void;
   setCategory: (id: number, value: Inclusion) => void;
   setJustification: (id: number, value: string) => void;
@@ -96,18 +33,211 @@ const InventoryContext = createContext<{
   addItem: (categoryId: number) => void;
   removeItem: (categoryId: number, itemId: string) => void;
   setItemFactor: (categoryId: number, itemId: string, factorId: string) => void;
-} | null>(null);
+  setSecondaryFactor: (categoryId: number, itemId: string, factorId: string) => void;
+  markCategoryStep: (categoryId: number, step: CategoryStep) => void;
+  openInventory: (sessionKey: string) => Promise<void>;
+  newInventory: (mode?: "blank" | "next-year") => void;
+  refreshInventories: () => Promise<void>;
+  pushNotice: (notice: AppNotification) => void;
+};
+
+const InventoryContext = createContext<InventoryContextValue | null>(null);
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
-  const [state, setFull] = useState(defaults);
+  const [state, setFull] = useState<InventoryState>(() => emptyInventory());
+  const [factors, setFactors] = useState<EmissionFactor[]>(EMISSION_FACTORS);
+  const [ready, setReady] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<InventoryContextValue["syncStatus"]>("idle");
+  const [savedInventories, setSavedInventories] = useState<SavedInventorySummary[]>([]);
+  const [eventNotices, setEventNotices] = useState<AppNotification[]>([]);
+  const skipSave = useRef(true);
+
+  const results = useMemo(() => calculateInventory(state, factors), [state, factors]);
+
+  const refreshInventories = useCallback(async () => {
+    try {
+      const response = await fetch("/api/inventories", { cache: "no-store" });
+      const rows = (await response.json()) as SavedInventorySummary[];
+      if (Array.isArray(rows)) setSavedInventories(rows);
+    } catch {
+      setSavedInventories([]);
+    }
+  }, []);
+
+  const pushNotice = useCallback((notice: AppNotification) => {
+    setEventNotices((current) => [notice, ...current.filter((row) => row.id !== notice.id)].slice(0, 8));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function boot() {
+      const stored = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+      const sessionKey = stored || newSessionKey();
+      window.sessionStorage.setItem(SESSION_STORAGE_KEY, sessionKey);
+      const [factorRows, inventories, loaded] = await Promise.all([
+        fetch("/api/factors", { cache: "no-store" })
+          .then((response) => response.json())
+          .catch(() => EMISSION_FACTORS),
+        fetch("/api/inventories", { cache: "no-store" })
+          .then((response) => response.json())
+          .catch(() => []),
+        fetch(`/api/inventories/${encodeURIComponent(sessionKey)}`, { cache: "no-store" })
+          .then((response) => (response.ok ? response.json() : null))
+          .catch(() => null),
+      ]);
+      if (cancelled) return;
+      if (Array.isArray(factorRows) && factorRows.length) setFactors(factorRows);
+      if (Array.isArray(inventories)) setSavedInventories(inventories);
+      skipSave.current = true;
+      if (stored && loaded?.sessionKey) {
+        setFull(loaded as InventoryState);
+      } else {
+        const freshKey = stored ? newSessionKey() : sessionKey;
+        window.sessionStorage.setItem(SESSION_STORAGE_KEY, freshKey);
+        setFull({ ...emptyInventory(), sessionKey: freshKey });
+      }
+      setReady(true);
+    }
+    void boot();
+    return () => {
+      cancelled = true;
+    };
+  }, [pushNotice]);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (skipSave.current) {
+      skipSave.current = false;
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setSyncStatus("saving");
+      void fetch("/api/collections", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          toCollectionDocs(state, {
+            totalTco2e: results.totalTco2e,
+            byCategory: results.categories.map((category) => ({
+              id: category.id,
+              name: category.name,
+              method: category.methodLabel,
+              formula: category.methodFormula,
+              tco2e: category.tco2e,
+              share: category.share,
+              completeCount: category.completeCount,
+              items: category.items.map((item) => ({
+                label: item.label,
+                tco2e: item.tco2e,
+                complete: item.complete,
+                steps: item.steps,
+              })),
+            })),
+            dataQualityPct: results.dataQualityPct,
+          }),
+        ),
+      })
+        .then(async (response) => {
+          const payload = (await response.json()) as { payload?: boolean; reason?: string };
+          if (payload.payload) {
+            setSyncStatus("saved");
+            void refreshInventories();
+          } else if (payload.reason === "empty") {
+            setSyncStatus("idle");
+          } else {
+            setSyncStatus("error");
+            pushNotice({
+              id: "sync-error",
+              title: "Could not save inventory",
+              body: "The inventory is still in this browser session. Totals still calculate from the data you entered.",
+              tone: "warn",
+            });
+          }
+        })
+        .catch(() => {
+          setSyncStatus("error");
+        });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [state, ready, results, refreshInventories, pushNotice]);
+
+  const openInventory = useCallback(
+    async (sessionKey: string) => {
+      const response = await fetch(`/api/inventories/${encodeURIComponent(sessionKey)}`, { cache: "no-store" });
+      if (!response.ok) {
+        pushNotice({
+          id: "open-failed",
+          title: "Could not open inventory",
+          body: "Payload did not return that company. It may have been deleted in admin.",
+          tone: "warn",
+        });
+        return;
+      }
+      const loaded = (await response.json()) as InventoryState;
+      window.sessionStorage.setItem(SESSION_STORAGE_KEY, sessionKey);
+      skipSave.current = true;
+      setFull(loaded);
+      pushNotice({
+        id: "opened-inventory",
+        title: loaded.year ? `${loaded.year} opened` : "Inventory opened",
+        body: `${loaded.companyName || "Untitled company"} is in the workspace. Use the sidebar to move through setup, categories, and results.`,
+        href: "/dashboard",
+        tone: "ok",
+      });
+    },
+    [pushNotice],
+  );
+
+  const newInventory = useCallback((mode: "blank" | "next-year" = "blank") => {
+    skipSave.current = true;
+    setSyncStatus("idle");
+    setFull((current) => {
+      const nextKey = newSessionKey();
+      window.sessionStorage.setItem(SESSION_STORAGE_KEY, nextKey);
+      const next = { ...emptyInventory(), sessionKey: nextKey };
+      if (mode === "next-year") {
+        next.companyName = current.companyName;
+        next.industry = current.industry;
+        next.hq = current.hq;
+        next.boundary = current.boundary;
+      }
+      return next;
+    });
+    pushNotice({
+      id: "new-inventory",
+      title: mode === "next-year" ? "New year started" : "New inventory started",
+      body:
+        mode === "next-year"
+          ? "Company details were kept. Choose the reporting year, then select the categories that apply."
+          : "Company, categories, and activity data start empty. Save begins when you add a company or include a category.",
+      href: "/company",
+      tone: "info",
+    });
+  }, [pushNotice]);
+
+  const derivedNotices = useMemo(() => inventoryNotifications(state, results), [state, results]);
+  const notices = useMemo(() => {
+    const seen = new Set(eventNotices.map((row) => row.id));
+    return [...eventNotices, ...derivedNotices.filter((row) => !seen.has(row.id))];
+  }, [derivedNotices, eventNotices]);
+
   const value = useMemo(
     () => ({
       state,
+      factors,
+      results,
+      ready,
+      syncStatus,
+      savedInventories,
+      notices,
       setState: (patch: Partial<InventoryState>) => setFull((current) => ({ ...current, ...patch })),
       setCategory: (id: number, value: Inclusion) =>
         setFull((current) => {
           const categories = { ...current.categories, [id]: value };
-          const entries = current.entries[id] ? current.entries : { ...current.entries, [id]: makeEntry(id) };
+          const entries =
+            value === "included" && !current.entries[id]
+              ? { ...current.entries, [id]: makeEntry(id) }
+              : current.entries;
           const activeCategoryId =
             categories[current.activeCategoryId] === "included" ? current.activeCategoryId : firstIncluded(categories, current.activeCategoryId);
           return { ...current, categories, entries, activeCategoryId };
@@ -140,13 +270,18 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       addItem: (categoryId: number) =>
         setFull((current) => {
           const entry = current.entries[categoryId] ?? makeEntry(categoryId);
+          const nextIndex =
+            entry.items.reduce((max, item) => {
+              const n = Number(item.id.split("-").pop());
+              return Number.isFinite(n) ? Math.max(max, n) : max;
+            }, 0) + 1;
           return {
             ...current,
             entries: {
               ...current.entries,
               [categoryId]: {
                 ...entry,
-                items: [...entry.items, makeItem(categoryId, entry.items.length + 1)],
+                items: [...entry.items, makeItem(categoryId, nextIndex)],
               },
             },
           };
@@ -177,9 +312,39 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             },
           };
         }),
+      setSecondaryFactor: (categoryId: number, itemId: string, factorId: string) =>
+        setFull((current) => {
+          const entry = current.entries[categoryId] ?? makeEntry(categoryId);
+          return {
+            ...current,
+            entries: {
+              ...current.entries,
+              [categoryId]: {
+                ...entry,
+                items: entry.items.map((item) => (item.id === itemId ? { ...item, secondaryFactorId: factorId } : item)),
+              },
+            },
+          };
+        }),
+      markCategoryStep: (categoryId: number, step: CategoryStep) =>
+        setFull((current) => {
+          const entry = current.entries[categoryId] ?? makeEntry(categoryId);
+          return {
+            ...current,
+            entries: {
+              ...current.entries,
+              [categoryId]: { ...entry, [`${step}Done`]: true },
+            },
+          };
+        }),
+      openInventory,
+      newInventory,
+      refreshInventories,
+      pushNotice,
     }),
-    [state],
+    [state, factors, results, ready, syncStatus, savedInventories, notices, openInventory, newInventory, refreshInventories, pushNotice],
   );
+
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;
 }
 

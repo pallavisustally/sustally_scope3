@@ -3,5 +3,10 @@ node_modules
 out
 .env
 .env.local
+data
 *.db
+*.sqlite
+*.sqlite-journal
 .DS_Store
+cms/node_modules
+cms/.next

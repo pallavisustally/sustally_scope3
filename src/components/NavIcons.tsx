@@ -79,6 +79,24 @@ export function IconChevronDown() {
   );
 }
 
+export function IconPencil() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 20h4.5L19.4 9.1a1.5 1.5 0 0 0 0-2.1L17 4.6a1.5 1.5 0 0 0-2.1 0L4 15.5V20z" />
+      <path strokeLinecap="round" d="M13.2 6.3 17.7 10.8" />
+    </svg>
+  );
+}
+
+export function IconTick() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" fill="color-mix(in oklab, var(--brand) 16%, transparent)" stroke="var(--brand)" strokeWidth="1.6" />
+      <path d="M8.2 12.2 10.7 14.7 15.8 9.4" stroke="var(--brand)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function NavGlyph({ href }: { href: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>

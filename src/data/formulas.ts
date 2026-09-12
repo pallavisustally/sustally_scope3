@@ -1,7 +1,30 @@
+import { methodLabel } from "@/data/protocol";
+
 export type CategoryFormula = {
   headline: string;
   methods: { label: string; formula: string }[];
 };
+
+export function formulaFor(categoryId: number, methodId: string) {
+  const pack = CATEGORY_FORMULAS[categoryId];
+  const label = methodLabel(categoryId, methodId);
+  if (!pack) {
+    return {
+      headline: "CO₂e = activity data × emission factor",
+      methodLabel: label,
+      methodFormula: "quantity × emission factor",
+    };
+  }
+  const needle = label.toLowerCase();
+  const match =
+    pack.methods.find((row) => row.label.toLowerCase() === needle) ??
+    pack.methods.find((row) => needle.includes(row.label.toLowerCase()) || row.label.toLowerCase().includes(needle));
+  return {
+    headline: pack.headline,
+    methodLabel: label,
+    methodFormula: match?.formula ?? pack.headline,
+  };
+}
 
 export const CATEGORY_FORMULAS: Record<number, CategoryFormula> = {
   1: {

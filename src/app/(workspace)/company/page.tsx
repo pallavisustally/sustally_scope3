@@ -3,6 +3,9 @@
 import { FooterNav, PageIntro } from "@/components/PageBits";
 import { useInventory } from "@/components/InventoryProvider";
 
+const INDUSTRIES = ["Manufacturing", "Energy", "Retail", "Technology", "Financial services", "Other"];
+const YEARS = ["2025", "2024", "2023", "2022"];
+
 export default function CompanyPage() {
   const { state, setState } = useInventory();
 
@@ -11,36 +14,48 @@ export default function CompanyPage() {
       <PageIntro
         kicker="Step 2"
         title="Company setup"
-        body="Provide company information, reporting year, and organizational boundary as defined in the GHG Protocol Corporate Standard. The same consolidation approach should be used across scopes 1, 2, and 3."
+        body="Provide company information, reporting year, and organizational boundary as defined in the GHG Protocol Corporate Standard. The same consolidation approach should be used across scopes 1, 2, and 3. Entries stay as you move between pages and reload from Payload after a refresh."
       />
       <div className="panel">
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           <div className="field">
             <label htmlFor="company">Company name</label>
-            <input id="company" value={state.companyName} onChange={(e) => setState({ companyName: e.target.value })} />
+            <input
+              id="company"
+              value={state.companyName}
+              placeholder="e.g. Acme Corporation"
+              onChange={(e) => setState({ companyName: e.target.value })}
+            />
           </div>
           <div className="field">
             <label htmlFor="hq">Headquarters location</label>
-            <input id="hq" value={state.hq} onChange={(e) => setState({ hq: e.target.value })} />
+            <input
+              id="hq"
+              value={state.hq}
+              placeholder="e.g. Bengaluru, India"
+              onChange={(e) => setState({ hq: e.target.value })}
+            />
           </div>
           <div className="field">
             <label htmlFor="industry">Industry</label>
             <select id="industry" value={state.industry} onChange={(e) => setState({ industry: e.target.value })}>
-              <option>Manufacturing</option>
-              <option>Energy</option>
-              <option>Retail</option>
-              <option>Technology</option>
-              <option>Financial services</option>
-              <option>Other</option>
+              <option value="">Select industry</option>
+              {INDUSTRIES.map((industry) => (
+                <option key={industry} value={industry}>
+                  {industry}
+                </option>
+              ))}
             </select>
           </div>
           <div className="field">
             <label htmlFor="year">Reporting year</label>
             <select id="year" value={state.year} onChange={(e) => setState({ year: e.target.value })}>
-              <option>2025</option>
-              <option>2024</option>
-              <option>2023</option>
-              <option>2022</option>
+              <option value="">Select year</option>
+              {YEARS.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
             </select>
           </div>
         </div>

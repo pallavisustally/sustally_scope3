@@ -1,5 +1,20 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
+import { readSessionToken, SESSION_COOKIE } from "@/lib/auth-session";
+import { findUserById } from "@/lib/auth-store";
 
-export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
-  return <AppShell>{children}</AppShell>;
+export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const session = await readSessionToken(token);
+  if (!session) redirect("/");
+  const user = await findUserById(session.userId);
+  if (!user) redirect("/");
+
+  return (
+    <Suspense>
+      <AppShell>{children}</AppShell>
+    </Suspense>
+  );
 }

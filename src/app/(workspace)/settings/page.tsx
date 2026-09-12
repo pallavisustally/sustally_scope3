@@ -1,23 +1,45 @@
 "use client";
 
 import { PageIntro } from "@/components/PageBits";
-import { ThemeToggle } from "@/components/Brand";
+import { useTheme } from "@/components/ThemeProvider";
+
+const THEMES = [
+  { id: "dark" as const, label: "Dark", detail: "Default workspace." },
+  { id: "light" as const, label: "Light", detail: "Cool grey surfaces." },
+];
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
+
   return (
     <>
-      <PageIntro
-        kicker="Workspace"
-        title="Settings"
-        body="Theme lives here for now. Company profile is edited on Company Setup. Authentication and Payload admin will connect later."
-      />
-      <div className="panel flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold">Appearance</h3>
-          <p className="text-[13px] text-[var(--muted)]">Light uses cool grey surfaces. Dark uses #121212 / #171717 / #1E1E1E. Buttons stay #8E4DFF in both.</p>
+      <PageIntro kicker="Workspace" title="Settings" body="Choose Dark or Light. The choice stays on this device." />
+
+      <section className="panel settings-theme">
+        <h3>Theme</h3>
+        <p>Dark is the default. Buttons stay the same purple in both themes.</p>
+        <div className="settings-theme-grid" role="group" aria-label="Color theme">
+          {THEMES.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className="settings-theme-card"
+              data-on={theme === option.id ? "true" : "false"}
+              data-preview={option.id}
+              aria-pressed={theme === option.id}
+              onClick={() => setTheme(option.id)}
+            >
+              <span className="settings-swatch" aria-hidden>
+                <i />
+                <i />
+                <i />
+              </span>
+              <strong>{option.label}</strong>
+              <span>{option.detail}</span>
+            </button>
+          ))}
         </div>
-        <ThemeToggle />
-      </div>
+      </section>
     </>
   );
 }

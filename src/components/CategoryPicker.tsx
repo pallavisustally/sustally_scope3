@@ -1,21 +1,24 @@
 "use client";
 
+import { useEffect } from "react";
 import { useInventory } from "@/components/InventoryProvider";
-import { SCOPE3_CATEGORIES } from "@/data/protocol";
-
-const STATUS: Record<string, string> = {
-  included: "Included",
-  not_applicable: "N/A",
-  excluded: "Excluded",
-};
+import { includedCategories } from "@/data/protocol";
 
 export function CategoryPicker() {
   const { state, setActiveCategory } = useInventory();
+  const selected = includedCategories(state.categories);
+
+  useEffect(() => {
+    if (state.categories[state.activeCategoryId] === "included") return;
+    const first = includedCategories(state.categories)[0];
+    if (first) setActiveCategory(first.id);
+  }, [state.categories, state.activeCategoryId, setActiveCategory]);
+
+  if (selected.length === 0) return null;
 
   return (
-    <div className="cat-picker" role="tablist" aria-label="Scope 3 categories">
-      {SCOPE3_CATEGORIES.map((category) => {
-        const status = state.categories[category.id];
+    <div className="cat-picker" role="tablist" aria-label="Selected scope 3 categories">
+      {selected.map((category) => {
         const active = state.activeCategoryId === category.id;
         return (
           <button
@@ -23,14 +26,10 @@ export function CategoryPicker() {
             type="button"
             role="tab"
             className={active ? "btn btn-primary cat-pick" : "btn btn-ghost cat-pick"}
-            data-status={status}
             aria-selected={active}
             onClick={() => setActiveCategory(category.id)}
           >
-            <span>
-              {category.id}. {category.name}
-            </span>
-            {status !== "included" ? <em>{STATUS[status]}</em> : null}
+            {category.id}. {category.name}
           </button>
         );
       })}

@@ -1,34 +1,72 @@
 "use client";
 
-import { CategoryPicker } from "@/components/CategoryPicker";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { CollectionTable } from "@/components/CollectionTable";
 import { useInventory } from "@/components/InventoryProvider";
-import { FooterNav, PageIntro } from "@/components/PageBits";
+import { FooterNav, NoSelectedCategories, PageIntro } from "@/components/PageBits";
 import { fieldsFor, itemLabel } from "@/data/fields";
-import { getCategory } from "@/data/protocol";
+import { includedCategories } from "@/data/protocol";
+import {
+  activityErrorSummary,
+  activityHasErrors,
+  isNumberField,
+  isRequiredField,
+  validateItemValues,
+} from "@/lib/validate-activity";
 
 export default function ActivityPage() {
-  const { state, setCategoryMethod, updateItemValues, addItem, removeItem } = useInventory();
-  const category = getCategory(state.activeCategoryId);
+  return (
+    <Suspense>
+      <ActivityPageInner />
+    </Suspense>
+  );
+}
+
+function ActivityPageInner() {
+  const searchParams = useSearchParams();
+  const cat = Number(searchParams.get("cat"));
+  if (Number.isFinite(cat) && cat > 0) return <ActivityForm requestedId={cat} />;
+  return <CollectionTable />;
+}
+
+function ActivityForm({ requestedId }: { requestedId: number }) {
+  const { state, setActiveCategory, setCategoryMethod, updateItemValues, addItem, removeItem, markCategoryStep } = useInventory();
+  const selected = includedCategories(state.categories);
+  const [showErrors, setShowErrors] = useState(false);
+
+  useEffect(() => {
+    if (selected.some((row) => row.id === requestedId) && state.activeCategoryId !== requestedId) {
+      setActiveCategory(requestedId);
+    }
+  }, [requestedId, selected, setActiveCategory, state.activeCategoryId]);
+
+  const category = selected.find((row) => row.id === state.activeCategoryId) ?? selected.find((row) => row.id === requestedId) ?? selected[0];
+  if (!category) return <NoSelectedCategories />;
   const entry = state.entries[category.id];
-  const status = state.categories[category.id];
   if (!entry) return null;
   const fields = fieldsFor(category.id, entry.method);
+  const itemErrors = entry.items.map((item) => validateItemValues(fields, item.values, entry.method));
+  const hasErrors = activityHasErrors(category.id, entry.method, entry.items);
+  const alerts = activityErrorSummary(category.id, entry.method, entry.items);
 
   return (
     <>
       <PageIntro
         kicker={`Category ${category.id}`}
         title={category.name}
-        body="Enter activity data for each category. Fields follow the selected calculation method. Only included categories are used in the inventory; forms for the rest stay available if you later include them."
+        body="Fields marked with * are required for calculation. Example text in fields is a hint only. Next stays locked until required fields are valid."
       />
-      <CategoryPicker />
       <div className="panel">
-        {status !== "included" ? (
-          <p className="mb-5 rounded-xl bg-[var(--surface-2)] px-4 py-3 text-[13px] text-[var(--muted)]">
-            This category is marked {status === "not_applicable" ? "not applicable" : "excluded"}
-            {state.justifications[category.id] ? `: ${state.justifications[category.id]}` : "."} You can still record
-            activity data here if the status changes.
-          </p>
+        {showErrors && hasErrors ? (
+          <div className="form-alert" role="alert">
+            <p className="font-semibold">Fill every required field before continuing.</p>
+            <ul>
+              {alerts.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
         ) : null}
         <p className="mb-3 text-[13px] font-semibold">Calculation method</p>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -65,15 +103,29 @@ export default function ActivityPage() {
                 {fields.map((field) => {
                   const inputId = `${item.id}-${field.id}`;
                   const value = item.values[field.id] ?? "";
+                  const error = showErrors ? itemErrors[index]?.[field.id] : undefined;
+                  const required = isRequiredField(field);
                   const onChange = (next: string) => updateItemValues(category.id, item.id, { [field.id]: next });
                   return (
-                    <div key={field.id} className={`field${field.wide ? " md:col-span-2" : ""}`}>
+                    <div key={field.id} className={`field${field.wide ? " md:col-span-2" : ""}`} data-invalid={error ? "true" : "false"}>
                       <label htmlFor={inputId}>
                         {field.label}
-                        {field.optional ? " (optional)" : null}
+                        {required ? (
+                          <span className="req" aria-hidden>
+                            *
+                          </span>
+                        ) : field.optional ? (
+                          " (optional)"
+                        ) : null}
                       </label>
                       {field.type === "select" ? (
-                        <select id={inputId} value={value} onChange={(event) => onChange(event.target.value)}>
+                        <select
+                          id={inputId}
+                          value={value}
+                          aria-invalid={error ? true : undefined}
+                          aria-required={required || undefined}
+                          onChange={(event) => onChange(event.target.value)}
+                        >
                           <option value="">Select</option>
                           {field.options?.map((option) => (
                             <option key={option} value={option}>
@@ -86,6 +138,8 @@ export default function ActivityPage() {
                           id={inputId}
                           value={value}
                           placeholder={field.placeholder}
+                          aria-invalid={error ? true : undefined}
+                          aria-required={required || undefined}
                           onChange={(event) => onChange(event.target.value)}
                         />
                       ) : (
@@ -93,9 +147,13 @@ export default function ActivityPage() {
                           id={inputId}
                           value={value}
                           placeholder={field.placeholder}
+                          inputMode={isNumberField(field) ? "decimal" : "text"}
+                          aria-invalid={error ? true : undefined}
+                          aria-required={required || undefined}
                           onChange={(event) => onChange(event.target.value)}
                         />
                       )}
+                      {error ? <p className="field-error">{error}</p> : null}
                     </div>
                   );
                 })}
@@ -107,7 +165,19 @@ export default function ActivityPage() {
           + Add another item
         </button>
       </div>
-      <FooterNav back="/categories" next="/activity/method" />
+      <FooterNav
+        back="/activity"
+        next={`/activity/factors?cat=${category.id}`}
+        canProceed={!hasErrors}
+        onBlocked={() => {
+          setShowErrors(true);
+          document.querySelector(".form-alert, [data-invalid='true']")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }}
+        onNext={() => {
+          markCategoryStep(category.id, "method");
+          markCategoryStep(category.id, "activity");
+        }}
+      />
     </>
   );
 }

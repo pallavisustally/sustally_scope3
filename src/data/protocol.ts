@@ -183,36 +183,54 @@ export type EmissionFactor = {
   categories: number[];
 };
 
-export const SAMPLE_FACTORS: EmissionFactor[] = [
+export const EMISSION_FACTORS: EmissionFactor[] = [
   { id: "1", factor: "1.90", unit: "kg CO2e / kg", source: "DEFRA", year: "2024", region: "Global", type: "Cradle-to-gate", categories: [1, 2] },
   { id: "2", factor: "2.10", unit: "kg CO2e / kg", source: "ecoinvent", year: "2023", region: "Global", type: "Cradle-to-gate", categories: [1, 2] },
   { id: "3", factor: "2.35", unit: "kg CO2e / kg", source: "US EPA", year: "2023", region: "United States", type: "Cradle-to-gate", categories: [1, 2] },
   { id: "4", factor: "1.85", unit: "kg CO2e / kg", source: "IEA", year: "2023", region: "Global", type: "Cradle-to-gate", categories: [1, 2] },
+  { id: "eeio-metals", factor: "1.12", unit: "kg CO2e / USD", source: "EEIO", year: "2023", region: "Global", type: "Basic metals spend", categories: [1, 2] },
+  { id: "eeio-services", factor: "0.19", unit: "kg CO2e / USD", source: "EEIO", year: "2023", region: "Global", type: "Professional services spend", categories: [1, 2] },
   { id: "c3-wtt", factor: "0.61", unit: "kg CO2e / litre", source: "DEFRA", year: "2024", region: "Global", type: "Well-to-tank", categories: [3] },
   { id: "c3-td", factor: "0.018", unit: "kg CO2e / kWh", source: "IEA", year: "2023", region: "India", type: "T&D loss", categories: [3] },
+  { id: "c3-gas", factor: "0.34", unit: "kg CO2e / kWh", source: "DEFRA", year: "2024", region: "Global", type: "Upstream natural gas", categories: [3] },
   { id: "c4-road", factor: "0.107", unit: "kg CO2e / tkm", source: "DEFRA", year: "2024", region: "Global", type: "HGV average", categories: [4, 9] },
   { id: "c4-sea", factor: "0.016", unit: "kg CO2e / tkm", source: "DEFRA", year: "2024", region: "Global", type: "Container ship", categories: [4, 9] },
+  { id: "c4-air", factor: "1.26", unit: "kg CO2e / tkm", source: "DEFRA", year: "2024", region: "Global", type: "Air freight", categories: [4, 9] },
+  { id: "c4-rail", factor: "0.028", unit: "kg CO2e / tkm", source: "DEFRA", year: "2024", region: "Global", type: "Rail freight", categories: [4, 9] },
+  { id: "c4-diesel", factor: "2.68", unit: "kg CO2e / litre", source: "DEFRA", year: "2024", region: "Global", type: "Diesel combustion", categories: [4, 6, 7] },
+  { id: "eeio-freight", factor: "0.42", unit: "kg CO2e / USD", source: "EEIO", year: "2023", region: "Global", type: "Transport spend", categories: [4, 9] },
   { id: "c5-landfill", factor: "467", unit: "kg CO2e / tonne", source: "DEFRA", year: "2024", region: "Global", type: "Landfill mixed", categories: [5, 12] },
   { id: "c5-recycle", factor: "21", unit: "kg CO2e / tonne", source: "DEFRA", year: "2024", region: "Global", type: "Recycling", categories: [5, 12] },
+  { id: "c5-incineration", factor: "21.3", unit: "kg CO2e / tonne", source: "DEFRA", year: "2024", region: "Global", type: "Incineration", categories: [5, 12] },
   { id: "c6-air", factor: "0.156", unit: "kg CO2e / pkm", source: "DEFRA", year: "2024", region: "Global", type: "Short-haul economy", categories: [6] },
   { id: "c6-rail", factor: "0.035", unit: "kg CO2e / pkm", source: "DEFRA", year: "2024", region: "Global", type: "National rail", categories: [6, 7] },
+  { id: "c6-car", factor: "0.171", unit: "kg CO2e / km", source: "DEFRA", year: "2024", region: "Global", type: "Average car", categories: [6, 7] },
+  { id: "eeio-travel", factor: "0.18", unit: "kg CO2e / USD", source: "EEIO", year: "2023", region: "Global", type: "Travel spend", categories: [6] },
   { id: "c7-avg", factor: "1.40", unit: "tCO2e / employee", source: "US EPA", year: "2023", region: "Global", type: "Average commute", categories: [7] },
   { id: "c8-office", factor: "85", unit: "kg CO2e / m²", source: "CRREM", year: "2024", region: "India", type: "Office energy", categories: [8, 13, 14] },
+  { id: "c8-warehouse", factor: "42", unit: "kg CO2e / m²", source: "CRREM", year: "2024", region: "India", type: "Warehouse energy", categories: [8, 9, 13, 14] },
+  { id: "c8-grid", factor: "0.71", unit: "kg CO2e / kWh", source: "CEA", year: "2024", region: "India", type: "Grid electricity", categories: [3, 8, 9, 11, 13, 14] },
   { id: "c10-process", factor: "0.45", unit: "kg CO2e / kg", source: "ecoinvent", year: "2023", region: "Global", type: "Intermediate processing", categories: [10] },
   { id: "c11-grid", factor: "0.71", unit: "kg CO2e / kWh", source: "CEA", year: "2024", region: "India", type: "Use-phase electricity", categories: [11] },
+  { id: "c11-fuel", factor: "2.31", unit: "kg CO2e / litre", source: "DEFRA", year: "2024", region: "Global", type: "Use-phase petrol", categories: [11] },
   { id: "c15-mfg", factor: "0.28", unit: "kg CO2e / USD", source: "EEIO", year: "2023", region: "Global", type: "Manufacturing sector", categories: [15] },
+  { id: "c15-energy", factor: "0.61", unit: "kg CO2e / USD", source: "EEIO", year: "2023", region: "Global", type: "Energy sector", categories: [15] },
 ];
 
 export function getCategory(id: number) {
   return SCOPE3_CATEGORIES.find((category) => category.id === id) ?? SCOPE3_CATEGORIES[0];
 }
 
-export function factorsForCategory(id: number) {
-  const rows = SAMPLE_FACTORS.filter((row) => row.categories.includes(id));
-  return rows.length ? rows : SAMPLE_FACTORS;
+export function methodLabel(categoryId: number, methodId: string) {
+  return getCategory(categoryId).methods.find((row) => row.id === methodId)?.label ?? methodId;
 }
 
-export function defaultFactorId(id: number) {
+export function factorsForCategory(id: number, catalog: EmissionFactor[] = EMISSION_FACTORS) {
+  const rows = catalog.filter((row) => row.categories.includes(id));
+  return rows.length ? rows : catalog;
+}
+
+export function defaultFactorId(id: number, catalog: EmissionFactor[] = EMISSION_FACTORS) {
   const preferred: Record<number, string> = {
     1: "2",
     2: "2",
@@ -230,7 +248,7 @@ export function defaultFactorId(id: number) {
     14: "c8-office",
     15: "c15-mfg",
   };
-  return preferred[id] ?? factorsForCategory(id)[0]?.id ?? SAMPLE_FACTORS[0].id;
+  return preferred[id] ?? factorsForCategory(id, catalog)[0]?.id ?? catalog[0]?.id ?? "";
 }
 
 export function includedCategories(map: Record<number, Inclusion>) {
@@ -239,10 +257,32 @@ export function includedCategories(map: Record<number, Inclusion>) {
 
 export const WIZARD_STEPS = [
   { href: "/activity", label: "Activity Data" },
-  { href: "/activity/method", label: "Calculation Method" },
   { href: "/activity/factors", label: "Emission Factors" },
-  { href: "/activity/review", label: "Review" },
 ] as const;
+
+export const CATEGORY_DATA_HREF = "/activity";
+export const CATEGORY_DATA_LABEL = "Selected categories";
+
+export function isCategoryDataPath(pathname: string) {
+  return pathname === "/activity" || pathname === "/activity/method" || pathname === "/activity/factors";
+}
+
+export function isNavChildActive(pathname: string, href: string) {
+  if (href === CATEGORY_DATA_HREF) return isCategoryDataPath(pathname);
+  return pathname === href;
+}
+
+export function collectionTrail(pathname: string, cat: string | null) {
+  if (pathname === "/activity/review") return [{ href: "/activity/review", label: "Review" }];
+  const hub = { href: CATEGORY_DATA_HREF, label: CATEGORY_DATA_LABEL };
+  if (pathname === "/activity/factors") {
+    return [hub, { href: cat ? `/activity/factors?cat=${cat}` : "/activity/factors", label: "Emission Factors" }];
+  }
+  if ((pathname === "/activity" && cat) || pathname === "/activity/method") {
+    return [hub, { href: cat ? `/activity?cat=${cat}` : "/activity", label: "Activity Data" }];
+  }
+  return [hub];
+}
 
 export type NavLeaf = {
   href: string;
@@ -279,9 +319,7 @@ export const NAV_MAIN: NavItem[] = [
     label: "Data collection",
     icon: "/activity",
     children: [
-      { href: "/activity", label: "Activity Data", icon: "/activity" },
-      { href: "/activity/method", label: "Calculation Method", icon: "/activity/method" },
-      { href: "/activity/factors", label: "Emission Factors", icon: "/activity/factors" },
+      { href: "/activity", label: "Selected categories", icon: "/activity" },
       { href: "/activity/review", label: "Review", icon: "/activity/review" },
     ],
   },
@@ -311,7 +349,7 @@ export const NAV_FOOTER: NavItem[] = [
 export function findNavFamily(pathname: string, trees: NavItem[][] = [NAV_MAIN, NAV_FOOTER]): NavGroup | undefined {
   for (const tree of trees) {
     for (const item of tree) {
-      if (isNavGroup(item) && item.children.some((child) => child.href === pathname)) {
+      if (isNavGroup(item) && item.children.some((child) => isNavChildActive(pathname, child.href))) {
         return item;
       }
     }
@@ -319,5 +357,5 @@ export function findNavFamily(pathname: string, trees: NavItem[][] = [NAV_MAIN, 
 }
 
 export function isGroupActive(pathname: string, group: NavGroup) {
-  return group.children.some((child) => child.href === pathname);
+  return group.children.some((child) => isNavChildActive(pathname, child.href));
 }

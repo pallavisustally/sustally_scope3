@@ -1,24 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   NAV_FOOTER,
   NAV_MAIN,
+  collectionTrail,
   findNavFamily,
+  includedCategories,
   isGroupActive,
+  isNavChildActive,
   isNavGroup,
   type NavGroup,
   type NavItem,
   type NavLeaf,
 } from "@/data/protocol";
 import { BrandWordmark, ThemeToggle, UserChip } from "./Brand";
-import { IconBell, IconChevronDown, IconChevronLeft, IconHelp, NavGlyph } from "./NavIcons";
+import { NotificationBell } from "./NotificationBell";
+import { IconChevronDown, IconChevronLeft, IconHelp, NavGlyph } from "./NavIcons";
+import { useInventory } from "./InventoryProvider";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editingCat = searchParams.get("cat");
+  const { state } = useInventory();
   const [collapsed, setCollapsed] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
@@ -27,12 +35,43 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   });
 
   const family = useMemo(() => findNavFamily(pathname), [pathname]);
-  const currentChild = family?.children.find((child) => child.href === pathname);
+  const trail = useMemo(() => {
+    if (!family) return [];
+    if (family.id === "activity") return collectionTrail(pathname, editingCat);
+    const child = family.children.find((entry) => entry.href === pathname);
+    return child ? [{ href: child.href, label: child.label }] : [];
+  }, [editingCat, family, pathname]);
+
+  const sidebarNav = useMemo(() => {
+    const selected = includedCategories(state.categories);
+    return NAV_MAIN.map((item) => {
+      if (!isNavGroup(item) || item.id !== "activity") return item;
+      const hub = item.children[0];
+      const review = item.children[item.children.length - 1];
+      return {
+        ...item,
+        children: [
+          hub,
+          ...selected.map((category) => ({
+            href: `/activity?cat=${category.id}`,
+            label: category.name,
+            icon: "/activity",
+          })),
+          review,
+        ],
+      };
+    });
+  }, [state.categories]);
 
   useEffect(() => {
     if (!family) return;
     setOpenGroups((prev) => ({ ...prev, [family.id]: true }));
   }, [family]);
+
+  useEffect(() => {
+    if (includedCategories(state.categories).length === 0) return;
+    setOpenGroups((prev) => ({ ...prev, activity: true }));
+  }, [state.categories]);
 
   const closeMobile = () => setNavOpen(false);
 
@@ -57,9 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
         <div className="topbar-actions">
-          <button type="button" className="top-icon" aria-label="Notifications">
-            <IconBell />
-          </button>
+          <NotificationBell />
           <Link href="/help" className="top-icon" aria-label="Help">
             <IconHelp />
           </Link>
@@ -79,11 +116,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {collapsed ? "›" : "‹"}
           </button>
           <nav className="side-nav">
-            {NAV_MAIN.map((item) => (
+            {sidebarNav.map((item) => (
               <NavEntry
                 key={isNavGroup(item) ? item.id : item.href}
                 item={item}
                 pathname={pathname}
+                cat={editingCat}
                 open={isNavGroup(item) ? Boolean(openGroups[item.id]) : false}
                 onToggle={toggleGroup}
                 onNavigate={closeMobile}
@@ -96,6 +134,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={isNavGroup(item) ? item.id : item.href}
                 item={item}
                 pathname={pathname}
+                cat={editingCat}
                 open={isNavGroup(item) ? Boolean(openGroups[item.id]) : false}
                 onToggle={toggleGroup}
                 onNavigate={closeMobile}
@@ -111,7 +150,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   key={child.href}
                   href={child.href}
                   className="family-tab"
-                  data-active={pathname === child.href ? "true" : "false"}
+                  data-active={isNavChildActive(pathname, child.href) ? "true" : "false"}
                 >
                   {child.label}
                 </Link>
@@ -119,13 +158,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
           ) : null}
           <div className="canvas-body">
-            {family && currentChild ? (
+            {family && trail.length ? (
               <p className="crumbs">
                 <Link href="/dashboard">Home</Link>
                 <span className="crumbs-sep">/</span>
                 <span>{family.label}</span>
-                <span className="crumbs-sep">/</span>
-                <span>{currentChild.label}</span>
+                {trail.map((crumb, index) => {
+                  const last = index === trail.length - 1;
+                  return (
+                    <span key={`${crumb.href}-${crumb.label}`}>
+                      <span className="crumbs-sep">/</span>
+                      {last ? <span>{crumb.label}</span> : <Link href={crumb.href}>{crumb.label}</Link>}
+                    </span>
+                  );
+                })}
               </p>
             ) : null}
             {children}
@@ -139,12 +185,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 function NavEntry({
   item,
   pathname,
+  cat,
   open,
   onToggle,
   onNavigate,
 }: {
   item: NavItem;
   pathname: string;
+  cat: string | null;
   open: boolean;
   onToggle: (group: NavGroup) => void;
   onNavigate: () => void;
@@ -173,12 +221,25 @@ function NavEntry({
       {open ? (
         <div className="nav-children">
           {item.children.map((child) => (
-            <NavLink key={child.href} item={child} active={pathname === child.href} onNavigate={onNavigate} nested />
+            <NavLink
+              key={child.href}
+              item={child}
+              active={isLeafActive(pathname, child.href, cat)}
+              onNavigate={onNavigate}
+              nested
+            />
           ))}
         </div>
       ) : null}
     </div>
   );
+}
+
+function isLeafActive(pathname: string, href: string, cat: string | null) {
+  if (href.includes("?cat=")) {
+    return pathname === "/activity" && cat === href.split("cat=")[1];
+  }
+  return isNavChildActive(pathname, href);
 }
 
 function NavLink({
@@ -192,6 +253,7 @@ function NavLink({
   onNavigate: () => void;
   nested?: boolean;
 }) {
+  const catId = item.href.includes("?cat=") ? item.href.split("cat=")[1] : "";
   return (
     <Link
       href={item.href}
@@ -201,7 +263,7 @@ function NavLink({
       onClick={onNavigate}
     >
       <span className="nav-ico">
-        <NavGlyph href={item.icon} />
+        {catId ? <span className="nav-cat-n">{catId}</span> : <NavGlyph href={item.icon} />}
       </span>
       <span className="nav-label">{item.label}</span>
     </Link>
