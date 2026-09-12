@@ -6,6 +6,7 @@ import { lexicalEditor } from "@payloadcms/richtext-lexical";
 import sharp from "sharp";
 
 import { Users } from "./collections/Users";
+import { AppUsers } from "./collections/AppUsers";
 import { Companies } from "./collections/Companies";
 import { CategorySelections } from "./collections/CategorySelections";
 import { ActivityItems } from "./collections/ActivityItems";
@@ -51,7 +52,7 @@ export default buildConfig({
       titleSuffix: " · Sustally Payload",
     },
   },
-  collections: [Users, Companies, CategorySelections, ActivityItems, EmissionFactors, InventoryResults, Reports],
+  collections: [Users, AppUsers, Companies, CategorySelections, ActivityItems, EmissionFactors, InventoryResults, Reports],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || "sustally-scope3-dev-secret-change-me",
   typescript: {

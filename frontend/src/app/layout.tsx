@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { InventoryProvider } from "@/components/InventoryProvider";
 import "./globals.css";
 
 const roboto = Roboto({
@@ -26,9 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={roboto.className}>
-        <ThemeProvider>
-          <InventoryProvider>{children}</InventoryProvider>
-        </ThemeProvider>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

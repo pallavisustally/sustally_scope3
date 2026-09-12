@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
+import { InventoryProvider } from "@/components/InventoryProvider";
 import { readSessionToken, SESSION_COOKIE } from "@/lib/auth-session";
 import { findUserById } from "@/lib/auth-store";
 
@@ -14,7 +15,9 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
 
   return (
     <Suspense>
-      <AppShell>{children}</AppShell>
+      <InventoryProvider>
+        <AppShell>{children}</AppShell>
+      </InventoryProvider>
     </Suspense>
   );
 }
