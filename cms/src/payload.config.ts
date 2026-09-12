@@ -17,12 +17,23 @@ import { seedEmissionFactors } from "./seed";
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
 
-const origins = [
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  "http://localhost:3001",
-  "http://127.0.0.1:3001",
-];
+function originList() {
+  const origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "https://scope-3-six.vercel.app",
+    process.env.PAYLOAD_PUBLIC_SERVER_URL,
+    process.env.FRONTEND_URL,
+    process.env.APP_URL,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => value.replace(/\/$/, ""));
+  return [...new Set(origins)];
+}
+
+const origins = originList();
 
 export default buildConfig({
   serverURL: process.env.PAYLOAD_PUBLIC_SERVER_URL || "http://127.0.0.1:3001",
