@@ -32,17 +32,17 @@ function parentIsMonorepoRoot() {
 
 if (process.env.VERCEL && parentIsMonorepoRoot()) {
   const repoRoot = join(backendRoot, "..");
-  const repoNext = join(repoRoot, ".next");
-  const repoNextPkg = join(repoRoot, "node_modules", "next");
-  const backendNextPkg = join(backendRoot, "node_modules", "next");
+  const copyOptions = { recursive: true, force: true };
 
-  mkdirSync(repoNext, { recursive: true });
-  cpSync(nextDir, repoNext, { recursive: true, force: true });
+  mkdirSync(join(repoRoot, ".next"), { recursive: true });
+  cpSync(nextDir, join(repoRoot, ".next"), copyOptions);
 
-  if (existsSync(backendNextPkg)) {
-    mkdirSync(dirname(repoNextPkg), { recursive: true });
-    cpSync(backendNextPkg, repoNextPkg, { recursive: true, force: true });
+  const backendModules = join(backendRoot, "node_modules");
+  const repoModules = join(repoRoot, "node_modules");
+  if (existsSync(backendModules)) {
+    mkdirSync(repoModules, { recursive: true });
+    cpSync(backendModules, repoModules, copyOptions);
   }
 
-  console.log("Copied backend .next and next package for Vercel Git finalization");
+  console.log("Copied backend .next and node_modules for Vercel Git finalization");
 }
