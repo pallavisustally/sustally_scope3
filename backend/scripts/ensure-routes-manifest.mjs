@@ -30,19 +30,10 @@ function parentIsMonorepoRoot() {
   }
 }
 
+// If Vercel still traces from the git root, Git Integration looks for
+// /vercel/path0/.next even when the app lives in backend/.
 if (process.env.VERCEL && parentIsMonorepoRoot()) {
   const repoRoot = join(backendRoot, "..");
-  const copyOptions = { recursive: true, force: true };
-
-  mkdirSync(join(repoRoot, ".next"), { recursive: true });
-  cpSync(nextDir, join(repoRoot, ".next"), copyOptions);
-
-  const backendModules = join(backendRoot, "node_modules");
-  const repoModules = join(repoRoot, "node_modules");
-  if (existsSync(backendModules)) {
-    mkdirSync(repoModules, { recursive: true });
-    cpSync(backendModules, repoModules, copyOptions);
-  }
-
-  console.log("Copied backend .next and node_modules for Vercel Git finalization");
+  cpSync(nextDir, join(repoRoot, ".next"), { recursive: true, force: true });
+  console.log("Copied backend/.next to the repo root for Vercel Git finalization");
 }
