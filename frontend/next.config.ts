@@ -4,6 +4,9 @@ import path from "path";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname),
+  turbopack: {
+    root: path.join(__dirname),
+  },
   serverExternalPackages: ["jspdf", "jspdf-autotable", "xlsx"],
 };
 

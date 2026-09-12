@@ -1,10 +1,10 @@
 {
-  "name": "sustally-scope-3-cms",
+  "name": "sustally-scope-3-backend",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev --hostname 127.0.0.1 --port 3001",
+    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev --webpack --hostname 127.0.0.1 --port 3001",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build --webpack && node ./scripts/ensure-routes-manifest.mjs",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start --port 3001",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
