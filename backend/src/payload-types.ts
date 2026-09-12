@@ -68,6 +68,7 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
+    'app-users': AppUser;
     companies: Company;
     'category-selections': CategorySelection;
     'activity-items': ActivityItem;
@@ -82,6 +83,7 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
+    'app-users': AppUsersSelect<false> | AppUsersSelect<true>;
     companies: CompaniesSelect<false> | CompaniesSelect<true>;
     'category-selections': CategorySelectionsSelect<false> | CategorySelectionsSelect<true>;
     'activity-items': ActivityItemsSelect<false> | ActivityItemsSelect<true>;
@@ -155,6 +157,25 @@ export interface User {
   collection: 'users';
 }
 /**
+ * Frontend sign-in accounts.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "app-users".
+ */
+export interface AppUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  passwordHash: string;
+  passwordSalt: string;
+  resetTokenHash?: string | null;
+  resetExpires?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "companies".
  */
@@ -164,6 +185,10 @@ export interface Company {
    * Browser session that created this company.
    */
   sessionKey?: string | null;
+  /**
+   * App user id that owns this inventory.
+   */
+  owner?: string | null;
   name: string;
   industry?: string | null;
   reportingYear?: number | null;
@@ -313,6 +338,10 @@ export interface PayloadLockedDocument {
         value: string | User;
       } | null)
     | ({
+        relationTo: 'app-users';
+        value: string | AppUser;
+      } | null)
+    | ({
         relationTo: 'companies';
         value: string | Company;
       } | null)
@@ -404,10 +433,27 @@ export interface UsersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "app-users_select".
+ */
+export interface AppUsersSelect<T extends boolean = true> {
+  firstName?: T;
+  lastName?: T;
+  email?: T;
+  phone?: T;
+  passwordHash?: T;
+  passwordSalt?: T;
+  resetTokenHash?: T;
+  resetExpires?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "companies_select".
  */
 export interface CompaniesSelect<T extends boolean = true> {
   sessionKey?: T;
+  owner?: T;
   name?: T;
   industry?: T;
   reportingYear?: T;

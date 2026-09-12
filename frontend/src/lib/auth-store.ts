@@ -26,7 +26,7 @@ export type PublicUser = {
   phone: string;
 };
 
-export type AuthResult = { user: PublicUser } | { error: string };
+export type AuthResult = { user: PublicUser } | { error: string; unavailable?: boolean };
 
 function publicUser(user: StoredUser): PublicUser {
   return {
@@ -56,8 +56,7 @@ export function isPhone(value: string) {
 }
 
 function phoneMatches(stored: string, input: string) {
-  if (!input || input.length < 8) return false;
-  return stored === input || stored.endsWith(input) || input.endsWith(stored);
+  return Boolean(stored) && Boolean(input) && stored === input;
 }
 
 function cmsMisconfigured() {
@@ -66,7 +65,20 @@ function cmsMisconfigured() {
 }
 
 function cmsUnavailableError() {
-  return "Could not reach the CMS. Set PAYLOAD_URL and PAYLOAD_SECRET on the frontend, then redeploy.";
+  if (cmsMisconfigured()) {
+    return "Could not reach the CMS. Set PAYLOAD_URL and PAYLOAD_SECRET on the frontend, then redeploy.";
+  }
+  return `Could not reach the CMS at ${PAYLOAD_URL}. Start the backend on port 3001, then try again.`;
+}
+
+function fromCmsCatch(error: unknown, fallback: string): AuthResult {
+  console.error(fallback, error);
+  const message = error instanceof Error ? error.message : String(error);
+  const unreachable = /fetch failed|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|AbortError|timed out/i.test(message);
+  if (cmsMisconfigured() || unreachable) {
+    return { error: cmsUnavailableError(), unavailable: true };
+  }
+  return { error: fallback, unavailable: true };
 }
 
 async function payloadRequest(path: string, init?: RequestInit) {
@@ -75,6 +87,7 @@ async function payloadRequest(path: string, init?: RequestInit) {
   }
   const response = await fetch(`${PAYLOAD_URL}/api${path}`, {
     ...init,
+    signal: init?.signal ?? AbortSignal.timeout(4000),
     headers: {
       "Content-Type": "application/json",
       "x-payload-secret": PAYLOAD_SECRET,
@@ -169,8 +182,7 @@ export async function createUser(input: {
     if (!user) return { error: "Could not create the account." };
     return { user: publicUser(user) };
   } catch (error) {
-    console.error("createUser failed", error);
-    return { error: cmsMisconfigured() ? cmsUnavailableError() : "Could not create the account. Try again in a moment." };
+    return fromCmsCatch(error, "Could not create the account. Try again in a moment.");
   }
 }
 
@@ -178,10 +190,11 @@ export async function authenticate(identifier: string, password: string): Promis
   const email = normalizeEmail(identifier);
   const phone = normalizePhone(identifier);
   try {
-    const user =
-      (isEmail(email) ? await findByField("email", email) : null) ??
-      (phone ? await findByField("phone", phone) : null) ??
-      (await listAppUsers()).find((row) => row.email === email || phoneMatches(row.phone, phone));
+    const user = isEmail(email)
+      ? await findByField("email", email)
+      : phone
+        ? ((await findByField("phone", phone)) ?? (await listAppUsers()).find((row) => phoneMatches(row.phone, phone)) ?? null)
+        : null;
     if (!user) return { error: "Email or phone and password do not match." };
     const hash = await hashPassword(password, user.passwordSalt);
     const left = Buffer.from(hash, "hex");
@@ -191,8 +204,7 @@ export async function authenticate(identifier: string, password: string): Promis
     }
     return { user: publicUser(user) };
   } catch (error) {
-    console.error("authenticate failed", error);
-    return { error: cmsMisconfigured() ? cmsUnavailableError() : "Could not sign in. Try again in a moment." };
+    return fromCmsCatch(error, "Could not sign in. Try again in a moment.");
   }
 }
 

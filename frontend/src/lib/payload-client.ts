@@ -108,7 +108,7 @@ export async function listEmissionFactors(): Promise<EmissionFactor[]> {
   return mapped.length ? mapped : EMISSION_FACTORS;
 }
 
-export async function listInventories(): Promise<SavedInventorySummary[]> {
+export async function listInventories(ownerId: string, currentSessionKey?: string): Promise<SavedInventorySummary[]> {
   const [companies, results] = await Promise.all([
     payloadRequest("/companies?limit=100&sort=-updatedAt&depth=0") as Promise<{ docs?: Array<Record<string, unknown>> }>,
     payloadRequest("/inventory-results?limit=200&depth=0") as Promise<{ docs?: Array<Record<string, unknown>> }>,
@@ -121,6 +121,13 @@ export async function listInventories(): Promise<SavedInventorySummary[]> {
     totals.set(companyId, Number(row.totalTco2e) || 0);
   }
   return (companies.docs ?? [])
+    .filter((doc) => {
+      const owner = typeof doc.owner === "string" ? doc.owner : "";
+      const sessionKey = typeof doc.sessionKey === "string" ? doc.sessionKey : "";
+      if (owner === ownerId) return true;
+      if (!owner && currentSessionKey && sessionKey === currentSessionKey) return true;
+      return false;
+    })
     .map((doc) => {
       const sessionKey = typeof doc.sessionKey === "string" ? doc.sessionKey : "";
       if (!sessionKey) return null;
@@ -137,9 +144,11 @@ export async function listInventories(): Promise<SavedInventorySummary[]> {
     .filter((row): row is SavedInventorySummary => Boolean(row));
 }
 
-export async function loadInventory(sessionKey: string): Promise<InventoryState | null> {
+export async function loadInventory(sessionKey: string, ownerId: string): Promise<InventoryState | null> {
   const company = await findByField("companies", "sessionKey", sessionKey);
   if (!company?.id) return null;
+  const owner = typeof company.owner === "string" ? company.owner : "";
+  if (owner && owner !== ownerId) return null;
   const [selections, items] = await Promise.all([
     listByCompany("category-selections", company.id as string | number),
     listByCompany("activity-items", company.id as string | number),
@@ -147,9 +156,9 @@ export async function loadInventory(sessionKey: string): Promise<InventoryState 
   return stateFromPayload({ sessionKey, company, selections, items });
 }
 
-export async function listCollection(slug: CollectionSlug) {
+export async function listCollection(slug: CollectionSlug, ownerId?: string) {
   if (slug === "emission-factors") return listEmissionFactors();
-  if (slug === "companies") return listInventories();
+  if (slug === "companies") return ownerId ? listInventories(ownerId) : [];
   const result = (await payloadRequest(`/${slug}?limit=1000&depth=0`)) as { docs?: Array<Record<string, unknown>> };
   return result.docs ?? [];
 }
@@ -159,9 +168,11 @@ export async function saveReport(sessionKey: string, data: {
   includes: string[];
   totalTco2e: number;
   year: number | null;
-}) {
+}, ownerId: string) {
   const company = await findByField("companies", "sessionKey", sessionKey);
   if (!company?.id) throw new Error("Save company details before storing a report.");
+  const owner = typeof company.owner === "string" ? company.owner : "";
+  if (owner && owner !== ownerId) throw new Error("This inventory belongs to another account.");
   await payloadRequest("/reports", {
     method: "POST",
     body: JSON.stringify({
@@ -175,7 +186,7 @@ export async function saveReport(sessionKey: string, data: {
   return { ok: true, companyId: company.id };
 }
 
-export async function saveInventory(next: Snapshot) {
+export async function saveInventory(next: Snapshot, ownerId: string) {
   const company = next.companies?.[0];
   const sessionKey = typeof company?.sessionKey === "string" ? company.sessionKey : "";
   const companyName = typeof company?.name === "string" ? company.name.trim() : "";
@@ -183,15 +194,19 @@ export async function saveInventory(next: Snapshot) {
   if (!sessionKey || (!companyName && !included)) return { payload: false, reason: "empty" as const };
 
   try {
+    const existing = await findByField("companies", "sessionKey", sessionKey);
+    const existingOwner = typeof existing?.owner === "string" ? existing.owner : "";
+    if (existingOwner && existingOwner !== ownerId) return { payload: false, reason: "forbidden" as const };
+
     const data = {
       sessionKey,
+      owner: ownerId,
       name: companyName || "Untitled company",
       industry: company?.industry ?? "",
       reportingYear: company?.reportingYear ?? null,
       headquarters: company?.headquarters ?? "",
       boundary: company?.boundary ?? "operational",
     };
-    const existing = await findByField("companies", "sessionKey", sessionKey);
     const saved = existing
       ? ((await payloadRequest(`/companies/${existing.id}`, { method: "PATCH", body: JSON.stringify(data) })) as { doc?: { id: unknown } }).doc
       : ((await payloadRequest("/companies", { method: "POST", body: JSON.stringify(data) })) as { doc?: { id: unknown } }).doc;

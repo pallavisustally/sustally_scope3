@@ -12,6 +12,12 @@ const roboto = Roboto({
 export const metadata: Metadata = {
   title: "Sustally · Scope 3 Accounting",
   description: "Measure and report corporate value chain (scope 3) emissions.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/brand/logomark-white.svg", type: "image/svg+xml" },
+    ],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

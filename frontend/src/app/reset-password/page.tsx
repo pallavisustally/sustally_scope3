@@ -1,11 +1,10 @@
 "use client";
 
 import { FormEvent, Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { BrandWordmark, ThemeToggle } from "@/components/Brand";
 
 function ResetForm() {
-  const router = useRouter();
   const token = useSearchParams().get("token") || "";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(token ? "" : "This reset link is missing a token.");
@@ -24,6 +23,7 @@ function ResetForm() {
     try {
       const response = await fetch("/api/auth/reset", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
       });
@@ -32,8 +32,7 @@ function ResetForm() {
         setError(payload.error || "Could not reset the password.");
         return;
       }
-      router.push("/dashboard");
-      router.refresh();
+      window.location.assign("/dashboard");
     } catch {
       setError("Network error. Try again.");
     } finally {

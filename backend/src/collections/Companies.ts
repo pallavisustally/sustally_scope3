@@ -12,6 +12,7 @@ export const Companies: CollectionConfig = {
   },
   fields: [
     { name: "sessionKey", type: "text", unique: true, admin: { description: "Browser session that created this company." } },
+    { name: "owner", type: "text", admin: { description: "App user id that owns this inventory." } },
     { name: "name", type: "text", required: true },
     { name: "industry", type: "text" },
     { name: "reportingYear", type: "number" },

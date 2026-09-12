@@ -10,7 +10,7 @@ export async function GET(_request: Request, { params }: Ctx) {
   const { slug } = await params;
   if (!isCollectionSlug(slug)) return NextResponse.json({ error: "Unknown collection" }, { status: 404 });
   try {
-    const docs = await listCollection(slug);
+    const docs = await listCollection(slug, auth.user.id);
     return NextResponse.json(docs);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Payload unavailable";

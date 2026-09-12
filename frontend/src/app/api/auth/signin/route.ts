@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   }
   const result = await authenticate(body.identifier, body.password);
   if (!("user" in result)) {
-    return NextResponse.json({ error: result.error }, { status: 401 });
+    return NextResponse.json({ error: result.error }, { status: result.unavailable ? 503 : 401 });
   }
   const token = await createSessionToken(result.user.id);
   const response = NextResponse.json({ user: result.user });

@@ -4,6 +4,10 @@ import type { ActivityItem, CategoryEntry, InventoryState } from "@/lib/inventor
 
 export const SESSION_STORAGE_KEY = "sustally-session-key";
 
+export function inventoryStorageKey(userId: string) {
+  return `${SESSION_STORAGE_KEY}:${userId}`;
+}
+
 export function emptyCategories(): Record<number, Inclusion> {
   return Object.fromEntries(SCOPE3_CATEGORIES.map((category) => [category.id, "excluded"])) as Record<number, Inclusion>;
 }

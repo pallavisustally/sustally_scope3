@@ -4,7 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { EMISSION_FACTORS, type EmissionFactor, type Inclusion } from "@/data/protocol";
 import { calculateInventory, type InventoryResult } from "@/lib/calculate";
 import { toCollectionDocs, type SavedInventorySummary } from "@/lib/collections-map";
-import { emptyInventory, makeEntry, makeItem, newSessionKey, SESSION_STORAGE_KEY } from "@/lib/inventory-defaults";
+import { emptyInventory, inventoryStorageKey, makeEntry, makeItem, newSessionKey } from "@/lib/inventory-defaults";
+import { useCurrentUser } from "./CurrentUser";
 import type { CategoryStep, InventoryState } from "@/lib/inventory-types";
 import type { AppNotification } from "@/lib/notifications";
 import { inventoryNotifications } from "@/lib/notifications";
@@ -44,6 +45,8 @@ type InventoryContextValue = {
 const InventoryContext = createContext<InventoryContextValue | null>(null);
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
+  const user = useCurrentUser();
+  const userId = user?.id ?? "";
   const [state, setFull] = useState<InventoryState>(() => emptyInventory());
   const [factors, setFactors] = useState<EmissionFactor[]>(EMISSION_FACTORS);
   const [ready, setReady] = useState(false);
@@ -54,31 +57,41 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   const results = useMemo(() => calculateInventory(state, factors), [state, factors]);
 
+  const rememberSession = useCallback(
+    (sessionKey: string) => {
+      if (!userId) return;
+      window.sessionStorage.setItem(inventoryStorageKey(userId), sessionKey);
+    },
+    [userId],
+  );
+
   const refreshInventories = useCallback(async () => {
     try {
-      const response = await fetch("/api/inventories", { cache: "no-store" });
+      const current = userId ? window.sessionStorage.getItem(inventoryStorageKey(userId)) || "" : "";
+      const response = await fetch(`/api/inventories?current=${encodeURIComponent(current)}`, { cache: "no-store" });
       const rows = (await response.json()) as SavedInventorySummary[];
       if (Array.isArray(rows)) setSavedInventories(rows);
     } catch {
       setSavedInventories([]);
     }
-  }, []);
+  }, [userId]);
 
   const pushNotice = useCallback((notice: AppNotification) => {
     setEventNotices((current) => [notice, ...current.filter((row) => row.id !== notice.id)].slice(0, 8));
   }, []);
 
   useEffect(() => {
+    if (!userId) return;
     let cancelled = false;
     async function boot() {
-      const stored = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+      const stored = window.sessionStorage.getItem(inventoryStorageKey(userId));
       const sessionKey = stored || newSessionKey();
-      window.sessionStorage.setItem(SESSION_STORAGE_KEY, sessionKey);
+      rememberSession(sessionKey);
       const [factorRows, inventories, loaded] = await Promise.all([
         fetch("/api/factors", { cache: "no-store" })
           .then((response) => response.json())
           .catch(() => EMISSION_FACTORS),
-        fetch("/api/inventories", { cache: "no-store" })
+        fetch(`/api/inventories?current=${encodeURIComponent(stored || "")}`, { cache: "no-store" })
           .then((response) => response.json())
           .catch(() => []),
         fetch(`/api/inventories/${encodeURIComponent(sessionKey)}`, { cache: "no-store" })
@@ -93,7 +106,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         setFull(loaded as InventoryState);
       } else {
         const freshKey = stored ? newSessionKey() : sessionKey;
-        window.sessionStorage.setItem(SESSION_STORAGE_KEY, freshKey);
+        rememberSession(freshKey);
         setFull({ ...emptyInventory(), sessionKey: freshKey });
       }
       setReady(true);
@@ -102,7 +115,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [pushNotice]);
+  }, [pushNotice, rememberSession, userId]);
 
   useEffect(() => {
     if (!ready) return;
@@ -174,7 +187,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const loaded = (await response.json()) as InventoryState;
-      window.sessionStorage.setItem(SESSION_STORAGE_KEY, sessionKey);
+      rememberSession(sessionKey);
       skipSave.current = true;
       setFull(loaded);
       pushNotice({
@@ -185,7 +198,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         tone: "ok",
       });
     },
-    [pushNotice],
+    [pushNotice, rememberSession],
   );
 
   const newInventory = useCallback((mode: "blank" | "next-year" = "blank") => {
@@ -193,7 +206,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     setSyncStatus("idle");
     setFull((current) => {
       const nextKey = newSessionKey();
-      window.sessionStorage.setItem(SESSION_STORAGE_KEY, nextKey);
+      rememberSession(nextKey);
       const next = { ...emptyInventory(), sessionKey: nextKey };
       if (mode === "next-year") {
         next.companyName = current.companyName;
@@ -213,7 +226,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       href: "/company",
       tone: "info",
     });
-  }, [pushNotice]);
+  }, [pushNotice, rememberSession]);
 
   const derivedNotices = useMemo(() => inventoryNotifications(state, results), [state, results]);
   const notices = useMemo(() => {

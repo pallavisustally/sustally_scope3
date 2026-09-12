@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       includes: Array.isArray(body.includes) ? body.includes : [],
       totalTco2e: Number(body.totalTco2e) || 0,
       year: body.year ?? null,
-    });
+    }, auth.user.id);
     return NextResponse.json({ ok: true, companyId: result.companyId });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save report";

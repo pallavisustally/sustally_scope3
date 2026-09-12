@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { BrandWordmark, ThemeToggle } from "@/components/Brand";
 
 type Mode = "signin" | "signup" | "forgot";
@@ -11,8 +11,20 @@ function safeNext(value: string | null) {
   return value;
 }
 
+function field(form: FormData, name: string) {
+  return String(form.get(name) || "").trim();
+}
+
+async function postAuth(url: string, body: Record<string, string>) {
+  return fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export function AuthBoard() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get("next"));
   const [mode, setMode] = useState<Mode>("signin");
@@ -47,33 +59,24 @@ export function AuthBoard() {
           setError("Passwords do not match.");
           return;
         }
-        const response = await fetch("/api/auth/signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            firstName: form.get("firstName"),
-            lastName: form.get("lastName"),
-            email: form.get("email"),
-            phone: form.get("phone"),
-            password,
-          }),
+        const response = await postAuth("/api/auth/signup", {
+          firstName: field(form, "firstName"),
+          lastName: field(form, "lastName"),
+          email: field(form, "email"),
+          phone: field(form, "phone"),
+          password,
         });
         const payload = (await response.json()) as { error?: string };
         if (!response.ok) {
           setError(payload.error || "Could not create the account.");
           return;
         }
-        router.push(next);
-        router.refresh();
+        window.location.assign(next);
         return;
       }
 
       if (mode === "forgot") {
-        const response = await fetch("/api/auth/forgot", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ identifier: form.get("identifier") }),
-        });
+        const response = await postAuth("/api/auth/forgot", { identifier: field(form, "identifier") });
         const payload = (await response.json()) as { error?: string; message?: string };
         if (!response.ok) {
           setError(payload.error || "Could not send the reset email.");
@@ -83,21 +86,16 @@ export function AuthBoard() {
         return;
       }
 
-      const response = await fetch("/api/auth/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          identifier: form.get("identifier"),
-          password: form.get("password"),
-        }),
+      const response = await postAuth("/api/auth/signin", {
+        identifier: field(form, "identifier"),
+        password: String(form.get("password") || ""),
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
         setError(payload.error || "Could not sign in.");
         return;
       }
-      router.push(next);
-      router.refresh();
+      window.location.assign(next);
     } catch {
       setError("Network error. Try again.");
     } finally {

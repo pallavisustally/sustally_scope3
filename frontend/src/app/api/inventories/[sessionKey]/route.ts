@@ -10,7 +10,7 @@ export async function GET(_request: Request, { params }: Ctx) {
   const { sessionKey } = await params;
   if (!sessionKey) return NextResponse.json({ error: "Missing session" }, { status: 400 });
   try {
-    const inventory = await loadInventory(sessionKey);
+    const inventory = await loadInventory(sessionKey, auth.user.id);
     if (!inventory) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(inventory);
   } catch (error) {

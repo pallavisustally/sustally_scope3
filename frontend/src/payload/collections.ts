@@ -17,6 +17,7 @@ export const payloadCollections = [
     slug: "companies",
     fields: [
       { name: "sessionKey", type: "text" },
+      { name: "owner", type: "text" },
       { name: "name", type: "text", required: true },
       { name: "industry", type: "text" },
       { name: "reportingYear", type: "number" },

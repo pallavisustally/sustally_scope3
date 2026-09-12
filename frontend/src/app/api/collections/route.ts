@@ -8,6 +8,6 @@ export async function PUT(request: Request) {
   if (!auth.user) return auth.response;
   const body = (await request.json()) as Record<string, CollectionDoc[]>;
   const next = snapshotFromBody(body);
-  const result = await saveInventory(next);
+  const result = await saveInventory(next, auth.user.id);
   return NextResponse.json({ ok: true, ...result });
 }

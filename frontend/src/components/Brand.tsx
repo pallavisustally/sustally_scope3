@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTheme } from "./ThemeProvider";
+import { useCurrentUser } from "./CurrentUser";
 import { IconAvatar, IconMoon, IconSun } from "./NavIcons";
 
 export function BrandWordmark({ className = "" }: { className?: string }) {
@@ -23,20 +23,10 @@ export function ThemeToggle() {
   );
 }
 
-type Me = { firstName: string; lastName: string; email: string };
-
 export function UserChip() {
-  const router = useRouter();
+  const user = useCurrentUser();
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<Me | null>(null);
   const root = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((response) => response.json() as Promise<{ user?: Me | null }>)
-      .then((payload) => setUser(payload.user ?? null))
-      .catch(() => setUser(null));
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -57,9 +47,8 @@ export function UserChip() {
   const initials = user ? `${user.firstName[0] ?? ""}${user.lastName[0] ?? ""}`.toUpperCase() : "";
 
   const signOut = async () => {
-    await fetch("/api/auth/signout", { method: "POST" });
-    router.push("/");
-    router.refresh();
+    await fetch("/api/auth/signout", { method: "POST", credentials: "include" });
+    window.location.assign("/");
   };
 
   return (
