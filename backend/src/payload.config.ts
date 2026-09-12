@@ -24,6 +24,8 @@ function originList() {
     "http://localhost:3001",
     "http://127.0.0.1:3001",
     "https://scope-3-six.vercel.app",
+    "https://sustally-scope3.vercel.app",
+    "https://backend-theta-one-55.vercel.app",
     process.env.PAYLOAD_PUBLIC_SERVER_URL,
     process.env.FRONTEND_URL,
     process.env.APP_URL,
