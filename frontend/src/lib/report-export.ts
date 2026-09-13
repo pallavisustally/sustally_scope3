@@ -3,6 +3,7 @@ import type { InventoryResult } from "@/lib/calculate";
 import { DQA_LABELS } from "@/lib/data-quality";
 import type { InventoryState } from "@/lib/inventory-types";
 import { formatShare, formatTco2e } from "@/lib/numbers";
+import { formatReportingYear } from "@/lib/reporting-year";
 
 export type ReportFormat = "pdf" | "xlsx";
 
@@ -28,7 +29,7 @@ function downloadBlob(blob: Blob, filename: string) {
 
 function fileStem(state: InventoryState) {
   const company = (state.companyName || "scope-3").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
-  return `${company || "scope-3"}-${state.year || "inventory"}`;
+  return `${company || "scope-3"}-${formatReportingYear(state.year) || "report"}`;
 }
 
 function exclusionRows(state: InventoryState) {
@@ -136,7 +137,7 @@ async function buildPdf(state: InventoryState, results: InventoryResult, include
   y += 16;
   doc.text(
     [
-      state.year ? `Reporting year ${state.year}` : "Reporting year not set",
+      state.year ? `Reporting year ${formatReportingYear(state.year)}` : "Reporting year not set",
       state.industry || null,
       state.boundary ? `Boundary: ${state.boundary}` : null,
     ]
@@ -169,7 +170,7 @@ async function buildPdf(state: InventoryState, results: InventoryResult, include
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     const summary = doc.splitTextToSize(
-      `${state.companyName || "This company"} reports ${formatTco2e(results.totalTco2e)} tCO2e of scope 3 emissions for ${state.year || "the reporting year"}. ${results.includedCount} of 15 GHG Protocol categories are included. ${formatShare(results.supplierSharePct)} of the total is from supplier-specific data. Biogenic CO2 of ${formatTco2e(results.biogenicTco2e)} tCO2 is reported separately and is not included in the scope 3 total.`,
+      `${state.companyName || "This company"} reports ${formatTco2e(results.totalTco2e)} tCO2e of scope 3 emissions for ${formatReportingYear(state.year) || "the reporting year"}. ${results.includedCount} of 15 GHG Protocol categories are included. ${formatShare(results.supplierSharePct)} of the total is from supplier-specific data. Emission factor by supplier of ${formatTco2e(results.biogenicTco2e)} tCO2 is reported separately and is not included in the scope 3 total.`,
       pageWidth - 80,
     );
     doc.text(summary, 40, y);
@@ -239,19 +240,19 @@ async function buildPdf(state: InventoryState, results: InventoryResult, include
     y += 22;
   }
 
-  if (want("Biogenic CO₂ reported separately")) {
+  if (want("Emission factor by supplier")) {
     if (y > 720) {
       doc.addPage();
       y = 48;
     }
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
-    doc.text("Biogenic CO2", 40, y);
+    doc.text("Emission factor by supplier", 40, y);
     y += 16;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.text(
-      `${formatTco2e(results.biogenicTco2e)} tCO2 of biogenic carbon dioxide is reported separately and is not included in the ${formatTco2e(results.totalTco2e)} tCO2e scope 3 total.`,
+      `${formatTco2e(results.biogenicTco2e)} tCO2 of emission factor by supplier is reported separately and is not included in the ${formatTco2e(results.totalTco2e)} tCO2e scope 3 total.`,
       40,
       y,
     );
@@ -293,12 +294,12 @@ async function buildExcel(state: InventoryState, results: InventoryResult, inclu
     XLSX.utils.aoa_to_sheet([
       ["Scope 3 Emissions Report"],
       ["Company", state.companyName || ""],
-      ["Reporting year", state.year || ""],
+      ["Reporting year", formatReportingYear(state.year) || ""],
       ["Industry", state.industry || ""],
       ["Headquarters", state.hq || ""],
       ["Boundary", state.boundary],
       ["Total tCO2e", results.totalTco2e],
-      ["Biogenic tCO2", results.biogenicTco2e],
+      ["Emission factor by supplier", results.biogenicTco2e],
       ["Supplier tCO2e", results.supplierTco2e],
       ["Secondary tCO2e", results.secondaryTco2e],
       ["Supplier share %", results.supplierSharePct],
@@ -327,7 +328,7 @@ async function buildExcel(state: InventoryState, results: InventoryResult, inclu
           Share: category.share,
           SupplierTco2e: category.supplierTco2e,
           SecondaryTco2e: category.secondaryTco2e,
-          BiogenicTco2e: category.biogenicTco2e,
+          EmissionFactorBySupplier: category.biogenicTco2e,
           CompleteItems: category.completeCount,
           Items: category.items.length,
         })),

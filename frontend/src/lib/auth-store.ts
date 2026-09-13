@@ -4,6 +4,7 @@ import { promisify } from "util";
 const scrypt = promisify(scryptCb);
 const PAYLOAD_URL = (process.env.PAYLOAD_URL || "http://127.0.0.1:3001").replace(/\/$/, "");
 const PAYLOAD_SECRET = process.env.PAYLOAD_SECRET || "sustally-scope3-dev-secret-change-me";
+const CMS_TIMEOUT_MS = 15_000;
 
 export type StoredUser = {
   id: string;
@@ -71,11 +72,26 @@ function cmsUnavailableError() {
   return `Could not reach the CMS at ${PAYLOAD_URL}. Start the backend on port 3001, then try again.`;
 }
 
+function errorText(error: unknown) {
+  if (error instanceof Error) return `${error.name} ${error.message}`;
+  return String(error);
+}
+
+function isTransientCmsError(error: unknown) {
+  return /fetch failed|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|AbortError|TimeoutError|timed out|aborted|Payload 5\d\d|UND_ERR/i.test(
+    errorText(error),
+  );
+}
+
 function fromCmsCatch(error: unknown, fallback: string): AuthResult {
   console.error(fallback, error);
-  const message = error instanceof Error ? error.message : String(error);
-  const unreachable = /fetch failed|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|AbortError|timed out/i.test(message);
-  if (cmsMisconfigured() || unreachable) {
+  if (/Payload 403/.test(errorText(error))) {
+    return {
+      error: "The app is not allowed to use the CMS. Set the same PAYLOAD_SECRET on the frontend and backend, then restart both.",
+      unavailable: true,
+    };
+  }
+  if (cmsMisconfigured() || isTransientCmsError(error)) {
     return { error: cmsUnavailableError(), unavailable: true };
   }
   return { error: fallback, unavailable: true };
@@ -85,33 +101,54 @@ async function payloadRequest(path: string, init?: RequestInit) {
   if (cmsMisconfigured()) {
     throw new Error(cmsUnavailableError());
   }
-  const response = await fetch(`${PAYLOAD_URL}/api${path}`, {
-    ...init,
-    signal: init?.signal ?? AbortSignal.timeout(4000),
-    headers: {
-      "Content-Type": "application/json",
-      "x-payload-secret": PAYLOAD_SECRET,
-      ...(init?.headers ?? {}),
-    },
-    cache: "no-store",
-  });
-  const text = await response.text();
-  let json: Record<string, unknown> = {};
+
+  const run = async () => {
+    const response = await fetch(`${PAYLOAD_URL}/api${path}`, {
+      ...init,
+      signal: init?.signal ?? AbortSignal.timeout(CMS_TIMEOUT_MS),
+      headers: {
+        "Content-Type": "application/json",
+        "x-payload-secret": PAYLOAD_SECRET,
+        ...(init?.headers ?? {}),
+      },
+      cache: "no-store",
+    });
+    const text = await response.text();
+    let json: Record<string, unknown> = {};
+    try {
+      json = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+    } catch {
+      json = { raw: text };
+    }
+    if (!response.ok) {
+      throw new Error(`Payload ${response.status} ${path}: ${text.slice(0, 240)}`);
+    }
+    return json;
+  };
+
   try {
-    json = text ? (JSON.parse(text) as Record<string, unknown>) : {};
-  } catch {
-    json = { raw: text };
+    return await run();
+  } catch (error) {
+    const method = (init?.method || "GET").toUpperCase();
+    if (method !== "GET" || !isTransientCmsError(error)) throw error;
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return await run();
   }
-  if (!response.ok) {
-    throw new Error(`Payload ${response.status} ${path}: ${text.slice(0, 240)}`);
-  }
-  return json;
+}
+
+function docId(doc: Record<string, unknown> | undefined | null) {
+  const raw = doc?.id ?? doc?._id;
+  if (raw == null) return "";
+  if (typeof raw === "object") return String(raw);
+  return String(raw);
 }
 
 function fromDoc(doc: Record<string, unknown> | undefined | null): StoredUser | null {
-  if (!doc?.id) return null;
+  if (!doc) return null;
+  const id = docId(doc);
+  if (!id || id === "[object Object]") return null;
   return {
-    id: String(doc.id),
+    id,
     firstName: typeof doc.firstName === "string" ? doc.firstName : "",
     lastName: typeof doc.lastName === "string" ? doc.lastName : "",
     email: typeof doc.email === "string" ? doc.email : "",
@@ -144,6 +181,14 @@ async function hashPassword(password: string, salt: string) {
   return derived.toString("hex");
 }
 
+async function passwordMatches(user: StoredUser, password: string) {
+  if (!user.passwordHash || !user.passwordSalt) return false;
+  const hash = await hashPassword(password, user.passwordSalt);
+  const left = Buffer.from(hash, "hex");
+  const right = Buffer.from(user.passwordHash, "hex");
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
 export async function createUser(input: {
   firstName: string;
   lastName: string;
@@ -163,24 +208,57 @@ export async function createUser(input: {
   if (password.length < 8) return { error: "Password must be at least 8 characters." };
 
   try {
-    if (await findByField("email", email)) return { error: "An account already uses that email." };
-    if (await findByField("phone", phone)) return { error: "An account already uses that phone number." };
-
     const salt = randomBytes(16).toString("hex");
-    const created = (await payloadRequest("/app-users", {
-      method: "POST",
-      body: JSON.stringify({
-        firstName,
-        lastName,
-        email,
-        phone,
-        passwordSalt: salt,
-        passwordHash: await hashPassword(password, salt),
-      }),
-    })) as { doc?: Record<string, unknown> };
-    const user = fromDoc(created.doc);
-    if (!user) return { error: "Could not create the account." };
-    return { user: publicUser(user) };
+    const [emailUser, phoneUser, passwordHash] = await Promise.all([
+      findByField("email", email),
+      findByField("phone", phone),
+      hashPassword(password, salt),
+    ]);
+    if (emailUser) return { error: "An account already uses that email." };
+    if (phoneUser) return { error: "An account already uses that phone number." };
+
+    const create = () =>
+      payloadRequest("/app-users", {
+        method: "POST",
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          phone,
+          passwordSalt: salt,
+          passwordHash,
+        }),
+      }) as Promise<{ doc?: Record<string, unknown> }>;
+
+    try {
+      const created = await create();
+      const user = fromDoc(created.doc);
+      if (!user) return { error: "Could not create the account." };
+      return { user: publicUser(user) };
+    } catch (error) {
+      const existing =
+        (await findByField("email", email).catch(() => null)) ??
+        (await findByField("phone", phone).catch(() => null));
+      if (existing) {
+        if (await passwordMatches(existing, password)) return { user: publicUser(existing) };
+        return {
+          error: existing.email === email ? "An account already uses that email." : "An account already uses that phone number.",
+        };
+      }
+      if (!isTransientCmsError(error)) throw error;
+      try {
+        const created = await create();
+        const user = fromDoc(created.doc);
+        if (!user) return { error: "Could not create the account." };
+        return { user: publicUser(user) };
+      } catch (retryError) {
+        const createdAnyway = await findByField("email", email).catch(() => null);
+        if (createdAnyway && (await passwordMatches(createdAnyway, password))) {
+          return { user: publicUser(createdAnyway) };
+        }
+        throw retryError;
+      }
+    }
   } catch (error) {
     return fromCmsCatch(error, "Could not create the account. Try again in a moment.");
   }
@@ -196,10 +274,7 @@ export async function authenticate(identifier: string, password: string): Promis
         ? ((await findByField("phone", phone)) ?? (await listAppUsers()).find((row) => phoneMatches(row.phone, phone)) ?? null)
         : null;
     if (!user) return { error: "Email or phone and password do not match." };
-    const hash = await hashPassword(password, user.passwordSalt);
-    const left = Buffer.from(hash, "hex");
-    const right = Buffer.from(user.passwordHash, "hex");
-    if (left.length !== right.length || !timingSafeEqual(left, right)) {
+    if (!(await passwordMatches(user, password))) {
       return { error: "Email or phone and password do not match." };
     }
     return { user: publicUser(user) };
@@ -209,13 +284,9 @@ export async function authenticate(identifier: string, password: string): Promis
 }
 
 export async function findUserById(id: string) {
-  try {
-    const result = (await payloadRequest(`/app-users/${id}?depth=0`)) as Record<string, unknown>;
-    const user = fromDoc((result.doc as Record<string, unknown> | undefined) ?? result);
-    return user ? publicUser(user) : null;
-  } catch {
-    return null;
-  }
+  if (!id) return null;
+  const user = await findByField("id", id);
+  return user ? publicUser(user) : null;
 }
 
 export async function findUserForReset(identifier: string) {

@@ -72,3 +72,12 @@ export function sessionCookieOptions() {
     maxAge: SESSION_DAYS * 24 * 60 * 60,
   };
 }
+
+export function clearSessionCookie(response: { cookies: { set: (name: string, value: string, options: Record<string, unknown>) => unknown } }) {
+  response.cookies.set(SESSION_COOKIE, "", {
+    ...sessionCookieOptions(),
+    maxAge: 0,
+    expires: new Date(0),
+  });
+  return response;
+}

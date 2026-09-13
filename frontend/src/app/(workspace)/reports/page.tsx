@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { FooterNav, PageIntro } from "@/components/PageBits";
 import { useInventory } from "@/components/InventoryProvider";
 import { formatShare, formatTco2e } from "@/lib/numbers";
+import { formatReportingYear } from "@/lib/reporting-year";
 import { downloadInventoryReport, type ReportFormat } from "@/lib/report-export";
 
 const INCLUDES = [
@@ -14,7 +15,7 @@ const INCLUDES = [
   "Exclusions with justification",
   "Data quality assessment",
   "Percent of emissions from supplier data",
-  "Biogenic CO₂ reported separately",
+  "Emission factor by supplier",
 ];
 
 export default function ReportsPage() {
@@ -30,7 +31,7 @@ export default function ReportsPage() {
 
   const filename = useMemo(() => {
     const company = (state.companyName || "scope-3").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
-    return `${company || "scope-3"}-${state.year || "inventory"}.${format}`;
+    return `${company || "scope-3"}-${formatReportingYear(state.year) || "report"}.${format}`;
   }, [format, state.companyName, state.year]);
 
   const generate = async () => {
@@ -83,7 +84,7 @@ export default function ReportsPage() {
         pushNotice({
           id: "report-file",
           title: "Report downloaded",
-          body: `${filename} was generated. Inventory data in this app is unchanged.`,
+          body: `${filename} was generated. Report data in this app is unchanged.`,
           href: "/reports",
           tone: "info",
         });
@@ -108,7 +109,7 @@ export default function ReportsPage() {
       <PageIntro
         kicker="Step 9"
         title="Generate report"
-        body="Download a GHG Protocol-aligned PDF or Excel file from this inventory."
+        body="Download a GHG Protocol-aligned PDF or Excel file from this report."
       />
       <div className="workspace-split">
         <div className="panel">
@@ -121,7 +122,7 @@ export default function ReportsPage() {
             </div>
             <div className="field">
               <label htmlFor="ry">Reporting year</label>
-              <input id="ry" value={state.year} placeholder="Set on Company setup" readOnly />
+              <input id="ry" value={formatReportingYear(state.year)} placeholder="Set on Company setup" readOnly />
             </div>
           </div>
           <p className="mt-6 text-[13px] font-semibold">Include</p>
@@ -153,11 +154,11 @@ export default function ReportsPage() {
           <p className="text-[12px] uppercase tracking-[0.16em] text-[#c19dff]">Preview</p>
           <h3 className="mt-6 text-[22px] font-semibold leading-tight">Scope 3 Emissions Report</h3>
           <p className="mt-4 text-[13px] text-[#d9d0f0]">{state.companyName || "Company name not entered"}</p>
-          <p className="text-[13px] text-[#d9d0f0]">{state.year ? `Reporting year ${state.year}` : "Reporting year not set"}</p>
+          <p className="text-[13px] text-[#d9d0f0]">{state.year ? `Reporting year ${formatReportingYear(state.year)}` : "Reporting year not set"}</p>
           <p className="mt-6 text-[28px] font-semibold tracking-[-0.04em]">{formatTco2e(results.totalTco2e)}</p>
           <p className="text-[13px] text-[#d9d0f0]">tCO₂e calculated from entered data</p>
           <p className="mt-2 text-[13px] text-[#d9d0f0]">
-            Biogenic {formatTco2e(results.biogenicTco2e)} tCO₂ reported separately · supplier share {formatShare(results.supplierSharePct)}
+            Emission factor by supplier {formatTco2e(results.biogenicTco2e)} tCO₂ reported separately · supplier share {formatShare(results.supplierSharePct)}
           </p>
           <p className="mt-8 text-[12px] text-[#c19dff]">File: {filename}</p>
         </aside>

@@ -7,6 +7,7 @@ import { PageIntro } from "@/components/PageBits";
 import { useInventory } from "@/components/InventoryProvider";
 import { isBlankInventory, visibleRecords } from "@/lib/inventory-records";
 import { formatTco2e } from "@/lib/numbers";
+import { formatReportingYear } from "@/lib/reporting-year";
 
 export function DashboardOverview() {
   const router = useRouter();
@@ -40,10 +41,10 @@ export function DashboardOverview() {
   if (!ready) {
     return (
       <>
-        <PageIntro kicker="Dashboard" title="Inventories" body="Loading saved reporting years." />
+        <PageIntro kicker="Dashboard" title="Reports" body="Loading saved reporting years." />
         <div className="panel collection-panel" aria-hidden="true">
           <div className="dash-table-head">
-            <h3>Inventories</h3>
+            <h3>Reports</h3>
           </div>
         </div>
       </>
@@ -54,12 +55,12 @@ export function DashboardOverview() {
     <>
       <PageIntro
         kicker="Dashboard"
-        title="Inventories"
-        body="Each row is a reporting year. Visit opens that inventory so you can move through company setup, categories, and results in the sidebar."
+        title="Reports"
+        body="Each row is a reporting year. Visit opens that report so you can move through company setup, categories, and results in the sidebar."
       />
       <div className="panel collection-panel">
         <div className="dash-table-head">
-          <h3>Inventories</h3>
+          <h3>Reports</h3>
           <button type="button" className="btn btn-primary" onClick={startNew}>
             New
           </button>
@@ -81,7 +82,7 @@ export function DashboardOverview() {
                   return (
                     <tr key={row.sessionKey} data-current={current ? "true" : "false"}>
                       <td>{row.name}</td>
-                      <td>{row.year || "—"}</td>
+                      <td>{row.year ? formatReportingYear(row.year) : "—"}</td>
                       <td className="dash-records-num">{formatTco2e(row.totalTco2e)} tCO₂e</td>
                       <td>
                         <button
@@ -99,7 +100,7 @@ export function DashboardOverview() {
               ) : (
                 <tr>
                   <td colSpan={4} className="dash-records-empty">
-                    No saved years yet. New starts a fresh inventory.
+                    No saved years yet. New starts a fresh report.
                   </td>
                 </tr>
               )}

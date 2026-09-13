@@ -7,10 +7,10 @@ import { IconAvatar, IconMoon, IconSun } from "./NavIcons";
 
 export function BrandWordmark({ className = "" }: { className?: string }) {
   return (
-    <>
-      <img src="/brand/typemark-black.svg" alt="Sustally" className={`logo-light brand-mark ${className}`} />
-      <img src="/brand/typemark-white.svg" alt="Sustally" className={`logo-dark brand-mark ${className}`} />
-    </>
+    <span className="brand-wordmark" role="img" aria-label="Sustally">
+      <img src="/brand/typemark-black.svg" alt="" className={`logo-light brand-mark ${className}`} />
+      <img src="/brand/typemark-white.svg" alt="" className={`logo-dark brand-mark ${className}`} />
+    </span>
   );
 }
 

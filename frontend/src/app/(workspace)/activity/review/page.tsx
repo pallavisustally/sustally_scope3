@@ -105,7 +105,7 @@ export default function ReviewPage() {
                         ) : null}
                         {itemResult && itemResult.biogenicTco2e > 0 ? (
                           <div className="grid grid-cols-[180px_1fr] gap-4">
-                            <dt className="text-[13px] text-[var(--muted)]">Biogenic CO₂</dt>
+                            <dt className="text-[13px] text-[var(--muted)]">Emission factor by supplier</dt>
                             <dd className="font-medium">{formatTco2e(itemResult.biogenicTco2e)} tCO₂ (not in scope 3 total)</dd>
                           </div>
                         ) : null}
@@ -128,7 +128,7 @@ export default function ReviewPage() {
           {results.totalItems !== results.completeItems
             ? ` · ${results.totalItems - results.completeItems} still missing required inputs`
             : ""}
-          {results.biogenicTco2e > 0 ? ` · biogenic CO₂ ${formatTco2e(results.biogenicTco2e)} tCO₂ reported separately` : ""}
+          {results.biogenicTco2e > 0 ? ` · emission factor by supplier ${formatTco2e(results.biogenicTco2e)} tCO₂ reported separately` : ""}
           .
         </p>
       </div>

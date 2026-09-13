@@ -94,7 +94,7 @@ export function ResultsCharts({ results }: { results: InventoryResult }) {
         <ul className="results-insights">
           {largest && largest.tco2e > 0 ? (
             <li>
-              <strong>{largest.name}</strong> is the largest source at {formatTco2e(largest.tco2e)} tCO₂e ({formatShare(largest.share)} of the inventory).
+              <strong>{largest.name}</strong> is the largest source at {formatTco2e(largest.tco2e)} tCO₂e ({formatShare(largest.share)} of the report).
             </li>
           ) : (
             <li>No calculated category emissions yet.</li>

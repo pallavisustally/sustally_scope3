@@ -44,7 +44,7 @@ export function inventoryNotifications(state: InventoryState, results: Inventory
     notes.push({
       id: "results-ready",
       title: "Results are live",
-      body: "Totals update from the activity data and Payload emission factors in this inventory.",
+      body: "Totals update from the activity data and Payload emission factors in this report.",
       href: "/results",
       tone: "ok",
     });
@@ -52,7 +52,7 @@ export function inventoryNotifications(state: InventoryState, results: Inventory
     notes.push({
       id: "start-company",
       title: "Start company setup",
-      body: "Add the company name and reporting year to begin saving this inventory to Payload.",
+      body: "Add the company name and reporting year to begin saving this report to Payload.",
       href: "/company",
       tone: "info",
     });

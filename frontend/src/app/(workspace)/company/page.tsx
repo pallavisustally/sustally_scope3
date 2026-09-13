@@ -2,9 +2,9 @@
 
 import { FooterNav, PageIntro } from "@/components/PageBits";
 import { useInventory } from "@/components/InventoryProvider";
+import { formatReportingYear, REPORTING_YEARS } from "@/lib/reporting-year";
 
 const INDUSTRIES = ["Manufacturing", "Energy", "Retail", "Technology", "Financial services", "Other"];
-const YEARS = ["2025", "2024", "2023", "2022"];
 
 export default function CompanyPage() {
   const { state, setState } = useInventory();
@@ -51,11 +51,14 @@ export default function CompanyPage() {
             <label htmlFor="year">Reporting year</label>
             <select id="year" value={state.year} onChange={(e) => setState({ year: e.target.value })}>
               <option value="">Select year</option>
-              {YEARS.map((year) => (
-                <option key={year} value={year}>
-                  {year}
+              {REPORTING_YEARS.map((year) => (
+                <option key={year.value} value={year.value}>
+                  {year.label}
                 </option>
               ))}
+              {state.year && !REPORTING_YEARS.some((year) => year.value === state.year) ? (
+                <option value={state.year}>{formatReportingYear(state.year)}</option>
+              ) : null}
             </select>
           </div>
         </div>

@@ -1,8 +1,11 @@
+import { reportingYearStart } from "@/lib/reporting-year";
+
 const FX_TO_USD: Record<string, Record<string, number>> = {
   "2022": { USD: 1, EUR: 1.05, GBP: 1.24, INR: 0.0127 },
   "2023": { USD: 1, EUR: 1.08, GBP: 1.24, INR: 0.0121 },
   "2024": { USD: 1, EUR: 1.08, GBP: 1.28, INR: 0.012 },
   "2025": { USD: 1, EUR: 1.08, GBP: 1.27, INR: 0.0115 },
+  "2026": { USD: 1, EUR: 1.08, GBP: 1.27, INR: 0.0114 },
 };
 
 const DEFAULT_YEAR = "2024";
@@ -35,7 +38,7 @@ export function convertSpend(
   if (overrideRate != null && overrideRate > 0) {
     return { amount: amount * overrideRate, rate: overrideRate, from, to };
   }
-  const year = reportingYear.trim() || DEFAULT_YEAR;
+  const year = reportingYearStart(reportingYear) || DEFAULT_YEAR;
   const fromUsd = usdRate(from, year);
   const toUsd = usdRate(to, year);
   if (fromUsd == null || toUsd == null || toUsd === 0) return null;
@@ -44,5 +47,5 @@ export function convertSpend(
 }
 
 export function fxNote(year: string) {
-  return `Spend is converted into the factor currency using ${year || DEFAULT_YEAR} average FX rates (USD, EUR, GBP, INR). Enter a custom FX rate on the item to override.`;
+  return `Spend is converted into the factor currency using ${reportingYearStart(year) || DEFAULT_YEAR} average FX rates (USD, EUR, GBP, INR). Enter a custom FX rate on the item to override.`;
 }

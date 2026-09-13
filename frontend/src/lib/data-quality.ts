@@ -1,4 +1,5 @@
 import type { EmissionFactor } from "@/data/protocol";
+import { reportingYearStart } from "@/lib/reporting-year";
 
 export type DqaScores = {
   technology: number;
@@ -31,7 +32,7 @@ function technologyScore(method: string) {
 
 function timeScore(factorYear: string | undefined, reportingYear: string) {
   const factor = Number(factorYear);
-  const report = Number(reportingYear);
+  const report = Number(reportingYearStart(reportingYear));
   if (!Number.isFinite(factor) || !Number.isFinite(report)) return 2;
   const gap = Math.abs(report - factor);
   if (gap === 0) return 5;

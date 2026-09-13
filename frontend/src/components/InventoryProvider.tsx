@@ -17,6 +17,22 @@ function firstIncluded(categories: Record<number, Inclusion>, fallback = 1) {
   return match ? Number(match[0]) : fallback;
 }
 
+function applyCategoryInclusion(current: InventoryState, ids: number[], value: Inclusion): InventoryState {
+  const categories = { ...current.categories };
+  let entries = current.entries;
+  for (const id of ids) {
+    categories[id] = value;
+    if (value === "included" && !entries[id]) {
+      entries = { ...entries, [id]: makeEntry(id) };
+    }
+  }
+  const activeCategoryId =
+    categories[current.activeCategoryId] === "included"
+      ? current.activeCategoryId
+      : firstIncluded(categories, current.activeCategoryId);
+  return { ...current, categories, entries, activeCategoryId };
+}
+
 type InventoryContextValue = {
   state: InventoryState;
   factors: EmissionFactor[];
@@ -27,6 +43,7 @@ type InventoryContextValue = {
   notices: AppNotification[];
   setState: (patch: Partial<InventoryState>) => void;
   setCategory: (id: number, value: Inclusion) => void;
+  setCategories: (ids: number[], value: Inclusion) => void;
   setJustification: (id: number, value: string) => void;
   setActiveCategory: (id: number) => void;
   setCategoryMethod: (id: number, method: string) => void;
@@ -161,8 +178,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             setSyncStatus("error");
             pushNotice({
               id: "sync-error",
-              title: "Could not save inventory",
-              body: "The inventory is still in this browser session. Totals still calculate from the data you entered.",
+              title: "Could not save report",
+              body: "The report is still in this browser session. Totals still calculate from the data you entered.",
               tone: "warn",
             });
           }
@@ -180,7 +197,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         pushNotice({
           id: "open-failed",
-          title: "Could not open inventory",
+          title: "Could not open report",
           body: "Payload did not return that company. It may have been deleted in admin.",
           tone: "warn",
         });
@@ -192,7 +209,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       setFull(loaded);
       pushNotice({
         id: "opened-inventory",
-        title: loaded.year ? `${loaded.year} opened` : "Inventory opened",
+        title: loaded.year ? `${loaded.year} opened` : "Report opened",
         body: `${loaded.companyName || "Untitled company"} is in the workspace. Use the sidebar to move through setup, categories, and results.`,
         href: "/dashboard",
         tone: "ok",
@@ -218,7 +235,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     });
     pushNotice({
       id: "new-inventory",
-      title: mode === "next-year" ? "New year started" : "New inventory started",
+      title: mode === "next-year" ? "New year started" : "New report started",
       body:
         mode === "next-year"
           ? "Company details were kept. Choose the reporting year, then select the categories that apply."
@@ -245,16 +262,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       notices,
       setState: (patch: Partial<InventoryState>) => setFull((current) => ({ ...current, ...patch })),
       setCategory: (id: number, value: Inclusion) =>
-        setFull((current) => {
-          const categories = { ...current.categories, [id]: value };
-          const entries =
-            value === "included" && !current.entries[id]
-              ? { ...current.entries, [id]: makeEntry(id) }
-              : current.entries;
-          const activeCategoryId =
-            categories[current.activeCategoryId] === "included" ? current.activeCategoryId : firstIncluded(categories, current.activeCategoryId);
-          return { ...current, categories, entries, activeCategoryId };
-        }),
+        setFull((current) => applyCategoryInclusion(current, [id], value)),
+      setCategories: (ids: number[], value: Inclusion) =>
+        setFull((current) => applyCategoryInclusion(current, ids, value)),
       setJustification: (id: number, value: string) =>
         setFull((current) => ({ ...current, justifications: { ...current.justifications, [id]: value } })),
       setActiveCategory: (id: number) => setFull((current) => ({ ...current, activeCategoryId: id })),

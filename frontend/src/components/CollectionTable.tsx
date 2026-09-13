@@ -4,21 +4,13 @@ import { useRouter } from "next/navigation";
 import { useInventory } from "@/components/InventoryProvider";
 import { FooterNav, NoSelectedCategories, PageIntro } from "@/components/PageBits";
 import { IconPencil, IconTick } from "@/components/NavIcons";
-import { includedCategories } from "@/data/protocol";
+import { includedCategories, methodLabel } from "@/data/protocol";
 
-function StepMark({ done, label }: { done: boolean; label: string }) {
-  if (done) {
-    return (
-      <span className="step-mark" data-done="true" title={`${label} saved`}>
-        <IconTick />
-        <span className="sr-only">{label} saved</span>
-      </span>
-    );
-  }
+function StepMark({ done, label, detail }: { done: boolean; label: string; detail: string }) {
   return (
-    <span className="step-mark" title={`${label} not started`}>
-      –
-      <span className="sr-only">{label} not started</span>
+    <span className="step-mark" data-done={done ? "true" : "false"} title={`${label}: ${detail}`}>
+      {done ? <IconTick /> : <span className="step-mark-dash" aria-hidden>–</span>}
+      <span className="step-mark-text">{detail}</span>
     </span>
   );
 }
@@ -59,6 +51,8 @@ export function CollectionTable() {
             <tbody>
               {selected.map((category) => {
                 const entry = state.entries[category.id];
+                const method = entry?.method ? methodLabel(category.id, entry.method) : "";
+                const itemCount = entry?.items.length ?? 0;
                 return (
                   <tr key={category.id}>
                     <td>
@@ -66,13 +60,25 @@ export function CollectionTable() {
                       <p className="collection-cat-name">{category.name}</p>
                     </td>
                     <td>
-                      <StepMark done={Boolean(entry?.methodDone)} label="Calculation method" />
+                      <StepMark
+                        done={Boolean(entry?.methodDone)}
+                        label="Calculation method"
+                        detail={entry?.methodDone && method ? method : "Not started"}
+                      />
                     </td>
                     <td>
-                      <StepMark done={Boolean(entry?.activityDone)} label="Activity data" />
+                      <StepMark
+                        done={Boolean(entry?.activityDone)}
+                        label="Activity data"
+                        detail={entry?.activityDone ? (itemCount === 1 ? "1 item saved" : `${itemCount} items saved`) : "Not started"}
+                      />
                     </td>
                     <td>
-                      <StepMark done={Boolean(entry?.factorsDone)} label="Emission factors" />
+                      <StepMark
+                        done={Boolean(entry?.factorsDone)}
+                        label="Emission factors"
+                        detail={entry?.factorsDone ? "Saved" : "Not started"}
+                      />
                     </td>
                     <td className="collection-edit-cell">
                       <button

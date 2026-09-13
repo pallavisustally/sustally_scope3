@@ -15,30 +15,56 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 export default function CategoriesPage() {
-  const { state, setCategory } = useInventory();
+  const { state, setCategory, setCategories } = useInventory();
   const [tab, setTab] = useState<TabId>("all");
   const visible = tab === "all" ? SCOPE3_CATEGORIES : SCOPE3_CATEGORIES.filter((c) => c.stream === tab);
+  const visibleIds = visible.map((category) => category.id);
+  const allVisibleSelected = visible.every((category) => state.categories[category.id] === "included");
+  const noneVisibleSelected = visible.every((category) => state.categories[category.id] !== "included");
+  const scopeLabel = tab === "all" ? "all 15 categories" : tab === "upstream" ? "upstream categories" : "downstream categories";
 
   return (
     <>
       <PageIntro
         kicker="Step 3"
         title="Select scope 3 categories"
-        body="Companies shall account for all 15 categories. Select the categories that apply to this inventory. Selections stay in place when you switch between All, Upstream, and Downstream, and when you go back to continue later."
+        body="Companies shall account for all 15 categories. Select the categories that apply to this report. Selections stay in place when you switch between All, Upstream, and Downstream, and when you go back to continue later."
       />
-      <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Category streams">
-        {TABS.map((option) => (
+      <div className="cat-toolbar">
+        <div className="cat-toolbar-tabs" role="tablist" aria-label="Category streams">
+          {TABS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === option.id}
+              className={tab === option.id ? "btn btn-primary" : "btn btn-ghost"}
+              onClick={() => setTab(option.id)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <div className="cat-toolbar-actions">
           <button
-            key={option.id}
             type="button"
-            role="tab"
-            aria-selected={tab === option.id}
-            className={tab === option.id ? "btn btn-primary" : "btn btn-ghost"}
-            onClick={() => setTab(option.id)}
+            className="btn btn-ghost"
+            disabled={allVisibleSelected}
+            aria-label={`Select ${scopeLabel}`}
+            onClick={() => setCategories(visibleIds, "included")}
           >
-            {option.label}
+            Select all
           </button>
-        ))}
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={noneVisibleSelected}
+            aria-label={`Clear ${scopeLabel}`}
+            onClick={() => setCategories(visibleIds, "excluded")}
+          >
+            Clear all
+          </button>
+        </div>
       </div>
       <div className="cat-grid">
         {visible.map((category) => {

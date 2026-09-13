@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button type="button" className="menu-btn icon-chip" onClick={() => setNavOpen((v) => !v)} aria-label="Open navigation">
             ☰
           </button>
-          <Link href="/dashboard" className="logo-link">
+          <Link href="/dashboard" className="logo-link" aria-label="Sustally home">
             <BrandWordmark />
           </Link>
         </div>

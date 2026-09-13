@@ -172,7 +172,7 @@ export async function saveReport(sessionKey: string, data: {
   const company = await findByField("companies", "sessionKey", sessionKey);
   if (!company?.id) throw new Error("Save company details before storing a report.");
   const owner = typeof company.owner === "string" ? company.owner : "";
-  if (owner && owner !== ownerId) throw new Error("This inventory belongs to another account.");
+  if (owner && owner !== ownerId) throw new Error("This report belongs to another account.");
   await payloadRequest("/reports", {
     method: "POST",
     body: JSON.stringify({

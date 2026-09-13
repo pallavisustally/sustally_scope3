@@ -76,10 +76,6 @@ button, input, select, textarea {
   outline-offset: 2px;
 }
 
-.logo-dark { display: none; }
-[data-theme="dark"] .logo-light { display: none; }
-[data-theme="dark"] .logo-dark { display: block; }
-
 .app-shell {
   min-height: 100vh;
   display: grid;
@@ -105,6 +101,11 @@ button, input, select, textarea {
   padding-right: 16px;
 }
 
+.brand-wordmark {
+  display: inline-flex;
+  align-items: center;
+}
+
 .brand-mark {
   display: block;
   height: 56px;
@@ -113,6 +114,10 @@ button, input, select, textarea {
   object-fit: contain;
   object-position: left center;
 }
+
+.brand-mark.logo-dark { display: none; }
+[data-theme="dark"] .brand-mark.logo-light { display: none; }
+[data-theme="dark"] .brand-mark.logo-dark { display: block; }
 
 .brand-mark-login {
   height: 44px;
@@ -1037,6 +1042,26 @@ button, input, select, textarea {
 }
 
 .step[data-on="true"] { color: var(--brand); }
+
+.cat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.cat-toolbar-tabs,
+.cat-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cat-toolbar-actions {
+  margin-left: auto;
+}
 
 .cat-grid {
   display: grid;
@@ -2266,11 +2291,32 @@ button, input, select, textarea {
 .step-mark {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
   min-width: 28px;
   color: var(--muted);
   font-size: 16px;
   line-height: 1;
+}
+
+.step-mark[data-done="true"] {
+  color: var(--brand);
+}
+
+.step-mark-dash {
+  width: 18px;
+  text-align: center;
+}
+
+.step-mark-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.step-mark:not([data-done="true"]) .step-mark-text {
+  color: var(--muted);
+  font-weight: 400;
 }
 
 .collection-edit-cell {

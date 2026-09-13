@@ -223,7 +223,7 @@ export function fieldsFor(categoryId: number, method: string) {
     );
   }
   extras.push(
-    field("biogenicTco2e", "Biogenic CO₂ (tCO₂)", {
+    field("biogenicTco2e", "Emission factor by supplier (tCO₂)", {
       optional: true,
       placeholder: "e.g. 12.5 · reported separately, not added to scope 3 total",
     }),

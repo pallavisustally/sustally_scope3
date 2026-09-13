@@ -72,7 +72,7 @@ export function NotificationBell() {
             <span>{notices.length}</span>
           </div>
           {notices.length === 0 ? (
-            <p className="notif-empty">No inventory alerts right now.</p>
+            <p className="notif-empty">No report alerts right now.</p>
           ) : (
             <ul>
               {notices.map((note) => (

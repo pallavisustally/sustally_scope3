@@ -6,6 +6,7 @@ import { ResultsCharts } from "@/components/ResultsCharts";
 import { useInventory } from "@/components/InventoryProvider";
 import type { CategoryResult } from "@/lib/calculate";
 import { formatShare, formatTco2e } from "@/lib/numbers";
+import { formatReportingYear } from "@/lib/reporting-year";
 
 function StatusPill({ complete, total }: { complete: number; total: number }) {
   if (!total) return <span className="status-pill">No items</span>;
@@ -97,7 +98,7 @@ export default function ResultsPage() {
   return (
     <>
       <PageIntro
-        kicker="Inventory view"
+        kicker="Report view"
         title="Results"
         body="Each complete activity item is calculated as activity data × emission factor, converted to tCO₂e. Optional labels and classification fields can stay empty."
       />
@@ -113,7 +114,7 @@ export default function ResultsPage() {
             <span> tCO₂e</span>
           </p>
           <p className="mt-3 text-[13px] text-[var(--muted)]">
-            {[state.companyName, state.year, state.industry].filter(Boolean).join(" · ") || "Add company details in Setup to label this inventory."}
+            {[state.companyName, state.year ? formatReportingYear(state.year) : "", state.industry].filter(Boolean).join(" · ") || "Add company details in Setup to label this report."}
           </p>
         </div>
         <dl className="results-meta">
@@ -140,7 +141,7 @@ export default function ResultsPage() {
             <dd>{formatShare(results.supplierSharePct)}</dd>
           </div>
           <div>
-            <dt>Biogenic CO₂</dt>
+            <dt>Emission factor by supplier</dt>
             <dd>{formatTco2e(results.biogenicTco2e)} tCO₂</dd>
           </div>
         </dl>
@@ -244,9 +245,9 @@ export default function ResultsPage() {
                   <div
                     className="w-full rounded-t-md bg-[var(--brand)]"
                     style={{ height: `${height}%`, opacity: current ? 1 : 0.45 }}
-                    title={`${year}: ${formatTco2e(value)} tCO2e`}
+                    title={`${formatReportingYear(year)}: ${formatTco2e(value)} tCO2e`}
                   />
-                  <span className="text-[12px] text-[var(--muted)]">{year}</span>
+                  <span className="text-[12px] text-[var(--muted)]">{formatReportingYear(year)}</span>
                 </div>
               );
             })}

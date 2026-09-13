@@ -1,5 +1,6 @@
 import type { SavedInventorySummary } from "@/lib/collections-map";
 import { formatShare, formatTco2e } from "@/lib/numbers";
+import { formatReportingYear } from "@/lib/reporting-year";
 
 const COMPANY_COLORS = [
   "var(--brand)",
@@ -66,17 +67,17 @@ function insightFor(stacks: YearStack[]) {
     return "No calculated emissions yet. Visit a year and enter activity data to plot the comparison.";
   }
   if (withData.length === 1) {
-    return `${withData[0].year} is the only year with calculated emissions (${formatTco2e(withData[0].total)} tCO₂e).`;
+    return `${formatReportingYear(withData[0].year)} is the only year with calculated emissions (${formatTco2e(withData[0].total)} tCO₂e).`;
   }
   const first = withData[0];
   const last = withData[withData.length - 1];
   if (first.total <= 0) {
-    return `${last.year} is ${formatTco2e(last.total)} tCO₂e. Earlier years are still at 0.`;
+    return `${formatReportingYear(last.year)} is ${formatTco2e(last.total)} tCO₂e. Earlier years are still at 0.`;
   }
   const change = ((last.total - first.total) / first.total) * 100;
   const direction = change > 0 ? "higher" : change < 0 ? "lower" : "unchanged";
   const amount = change === 0 ? "" : ` (${formatShare(Math.abs(change))})`;
-  return `${last.year} is ${direction} than ${first.year}${amount}: ${formatTco2e(last.total)} tCO₂e vs ${formatTco2e(first.total)} tCO₂e.`;
+  return `${formatReportingYear(last.year)} is ${direction} than ${formatReportingYear(first.year)}${amount}: ${formatTco2e(last.total)} tCO₂e vs ${formatTco2e(first.total)} tCO₂e.`;
 }
 
 export function DashboardYearChart({
@@ -118,7 +119,7 @@ export function DashboardYearChart({
             return (
               <div key={stack.year} className="dash-year-col" data-current={current ? "true" : "false"}>
                 <span className="dash-year-val">{formatTco2e(stack.total)}</span>
-                <div className="dash-year-track" title={`${stack.year}: ${formatTco2e(stack.total)} tCO₂e`}>
+                <div className="dash-year-track" title={`${formatReportingYear(stack.year)}: ${formatTco2e(stack.total)} tCO₂e`}>
                   <span
                     className="dash-year-fill"
                     style={{
@@ -135,7 +136,7 @@ export function DashboardYearChart({
                       : null}
                   </span>
                 </div>
-                <span className="dash-year-label">{stack.year}</span>
+                <span className="dash-year-label">{formatReportingYear(stack.year)}</span>
               </div>
             );
           })}
@@ -146,7 +147,7 @@ export function DashboardYearChart({
               {arcs.map((slice) => (
                 <path key={slice.year} d={donutPath(cx, cy, 38, 68, slice.start, slice.end)} fill={slice.color}>
                   <title>
-                    {slice.year}: {formatTco2e(slice.total)} tCO₂e ({formatShare(grand > 0 ? (slice.total / grand) * 100 : 0)})
+                    {formatReportingYear(slice.year)}: {formatTco2e(slice.total)} tCO₂e ({formatShare(grand > 0 ? (slice.total / grand) * 100 : 0)})
                   </title>
                 </path>
               ))}
@@ -162,7 +163,7 @@ export function DashboardYearChart({
               {arcs.map((slice) => (
                 <li key={slice.year}>
                   <span style={{ background: slice.color }} />
-                  <em>{slice.year}</em>
+                  <em>{formatReportingYear(slice.year)}</em>
                   <strong>{formatShare(grand > 0 ? (slice.total / grand) * 100 : 0)}</strong>
                 </li>
               ))}

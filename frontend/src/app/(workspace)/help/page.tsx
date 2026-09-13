@@ -6,7 +6,7 @@ const STEPS = [
   {
     href: "/dashboard",
     label: "Dashboard",
-    detail: "Each row is a company and reporting year. New starts another inventory. Visit opens that year so you can move through setup, collection, and results.",
+    detail: "Each row is a company and reporting year. New starts another report. Visit opens that year so you can move through setup, collection, and results.",
   },
   {
     href: "/company",
@@ -47,11 +47,11 @@ const QUESTIONS = [
   },
   {
     q: "A year shows 0 tCO₂e on the dashboard. Is that a bug?",
-    a: "No. The total is 0 until that inventory has activity data and factors that can calculate. Open Visit, complete data collection, then return to the dashboard. Year comparison still plots the 0 so you can see the gap.",
+    a: "No. The total is 0 until that report has activity data and factors that can calculate. Open Visit, complete data collection, then return to the dashboard. Year comparison still plots the 0 so you can see the gap.",
   },
   {
     q: "Where did an earlier reporting year go?",
-    a: "Open Dashboard. Saved years are the table rows, not the sidebar. Visit loads that inventory. Refreshing this tab restores the current session. Closing the tab starts a fresh inventory.",
+    a: "Open Dashboard. Saved years are the table rows, not the sidebar. Visit loads that report. Refreshing this tab restores the current session. Closing the tab starts a fresh report.",
   },
   {
     q: "Do I need to include all 15 categories?",
@@ -94,12 +94,12 @@ export default function HelpPage() {
       <PageIntro
         kicker="Support"
         title="Help and support"
-        body="How to complete a Scope 3 inventory in this workspace, how years are stored, and which GHG Protocol documents the calculations follow."
+        body="How to complete a Scope 3 report in this workspace, how years are stored, and which GHG Protocol documents the calculations follow."
       />
 
       <section className="panel help-flow">
-        <h3>Complete an inventory</h3>
-        <p className="help-lede">Work top to bottom. You can leave a page and come back; entries stay on the inventory you have open.</p>
+        <h3>Complete a report</h3>
+        <p className="help-lede">Work top to bottom. You can leave a page and come back; entries stay on the report you have open.</p>
         <ol>
           {STEPS.map((step, index) => (
             <li key={step.href}>
@@ -124,7 +124,7 @@ export default function HelpPage() {
             <li>New copies company details and starts a blank reporting year.</li>
             <li>Visit opens that year in Company setup, categories, collection, and results.</li>
             <li>Year comparison under the table plots every year you have entered, including zeros.</li>
-            <li>Closing the browser tab starts a fresh inventory. Refreshing the same tab restores the session.</li>
+            <li>Closing the browser tab starts a fresh report. Refreshing the same tab restores the session.</li>
           </ul>
         </article>
         <article>

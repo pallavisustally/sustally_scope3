@@ -28,8 +28,8 @@ export function NoSelectedCategories() {
     return (
       <PageIntro
         kicker="Data collection"
-        title="Loading inventory"
-        body="Restoring the working inventory from Payload."
+        title="Loading report"
+        body="Restoring the working report from Payload."
       />
     );
   }
