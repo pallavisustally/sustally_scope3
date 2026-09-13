@@ -30,7 +30,7 @@ export function useCommuteSurvey() {
   const [closeAt, setCloseAt] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState<"create" | "apply" | "close" | "save" | "">("");
+  const [busy, setBusy] = useState<"create" | "apply" | "close" | "save" | "refresh" | "">("");
   const [copiedId, setCopiedId] = useState("");
   const [tokens, setTokens] = useState<Record<string, string>>({});
 
@@ -46,6 +46,7 @@ export function useCommuteSurvey() {
       if (token) stored[row.id] = token;
     }
     setTokens(stored);
+    return payload.surveys ?? [];
   }, [state.sessionKey]);
 
   useEffect(() => {
@@ -157,35 +158,65 @@ export function useCommuteSurvey() {
     }
   };
 
+  const applySurveyCore = async (id: string) => {
+    const response = await fetch(`/api/surveys/${encodeURIComponent(id)}/apply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionKey: state.sessionKey }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as {
+      items?: CommuteSurveyItemValues[];
+      stats?: CommuteSurveyStats;
+      error?: string;
+    };
+    if (!response.ok) throw new Error(payload.error || "Could not apply the survey.");
+    const items = payload.items ?? [];
+    if (!items.length) throw new Error("No responses to apply yet.");
+    applyCommuteSurveyItems(id, items);
+    await load();
+    return { items, stats: payload.stats };
+  };
+
   const applySurvey = async (id: string) => {
     setBusy("apply");
     setError("");
     try {
-      const response = await fetch(`/api/surveys/${encodeURIComponent(id)}/apply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionKey: state.sessionKey }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        items?: CommuteSurveyItemValues[];
-        stats?: CommuteSurveyStats;
-        error?: string;
-      };
-      if (!response.ok) throw new Error(payload.error || "Could not apply the survey.");
-      const items = payload.items ?? [];
-      if (!items.length) throw new Error("No responses to apply yet.");
-      applyCommuteSurveyItems(id, items);
+      const result = await applySurveyCore(id);
       pushNotice({
         id: "commute-survey-apply",
         title: "Commuting survey applied",
-        body: `${payload.stats?.responseCount ?? items.length} responses replaced the Category 7 rows. Distance-based is selected because the survey collected days, mode, and km.`,
+        body: `${result.stats?.responseCount ?? result.items.length} responses replaced the Category 7 rows. Distance-based is selected because the survey collected days, mode, and km.`,
         href: "/activity?cat=7",
         tone: "ok",
       });
       setMessage("Survey totals are applied below.");
-      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not apply the survey.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const refresh = async () => {
+    setBusy("refresh");
+    setError("");
+    setMessage("");
+    try {
+      const rows = (await load()) ?? [];
+      const current = rows.find((row) => !row.closed) ?? rows[0];
+      if (!current) {
+        setMessage("No survey campaign to refresh.");
+        return;
+      }
+      if (current.stats.responseCount > 0) {
+        const result = await applySurveyCore(current.id);
+        const count = result.stats?.responseCount ?? result.items.length;
+        setMessage(`Survey updated · ${count} response${count === 1 ? "" : "s"}.`);
+        return;
+      }
+      setMessage("No responses yet.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not refresh the survey.");
     } finally {
       setBusy("");
     }
@@ -210,5 +241,6 @@ export function useCommuteSurvey() {
     closeSurvey,
     saveScaling,
     applySurvey,
+    refresh,
   };
 }

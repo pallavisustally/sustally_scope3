@@ -429,6 +429,18 @@ button, input, select, textarea {
   max-width: 68ch;
 }
 
+.help-cat7 {
+  margin-top: 20px;
+  scroll-margin-top: calc(var(--topbar-h) + 16px);
+}
+
+.help-cat7-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
 .help-link,
 .help-ext {
   color: var(--brand);
@@ -2598,6 +2610,16 @@ button, input, select, textarea {
   line-height: 1.45;
 }
 
+.c7-learn-hint {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.c7-learn-hint a {
+  font-weight: 600;
+  color: var(--brand);
+}
+
 .c7-learn {
   font-size: 13px;
   font-weight: 600;
@@ -2674,8 +2696,16 @@ button, input, select, textarea {
   border: 1px solid color-mix(in oklab, var(--line) 80%, transparent);
 }
 
-.c7-linkbox > p {
+.c7-link-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0 0 8px;
+}
+
+.c7-link-head p {
+  margin: 0;
   font-size: 12px;
   font-weight: 600;
 }
@@ -2708,6 +2738,19 @@ button, input, select, textarea {
   background: transparent;
   color: var(--text);
   cursor: pointer;
+}
+
+.c7-icon-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.c7-icon-btn[data-spin="true"] svg {
+  animation: c7-spin 0.8s linear infinite;
+}
+
+@keyframes c7-spin {
+  to { transform: rotate(360deg); }
 }
 
 .c7-link-actions {
@@ -2762,20 +2805,6 @@ button, input, select, textarea {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-}
-
-.c7-info {
-  display: inline-grid;
-  place-items: center;
-  width: 14px;
-  height: 14px;
-  margin-left: 6px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 9px;
-  font-weight: 700;
-  vertical-align: middle;
 }
 
 .c7-applied-list {

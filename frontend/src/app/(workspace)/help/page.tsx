@@ -21,7 +21,7 @@ const STEPS = [
   {
     href: "/activity",
     label: "Data collection",
-    detail: "Open a category, pick a calculation method, enter activity data, then assign emission factors. If Category 7 is included, the commuting survey appears on that category page before the method picker. For supplier-specific or hybrid rows, add an optional supplier email and send a confirmation.",
+    detail: "Open a category, pick a calculation method, enter activity data, then assign emission factors. Category 7 (employee commuting) has its own survey steps — see How to fill Category 7 below. For supplier-specific or hybrid rows, add an optional supplier email and send a confirmation.",
   },
   {
     href: "/activity/review",
@@ -47,7 +47,7 @@ const QUESTIONS = [
   },
   {
     q: "How does the commuting survey work?",
-    a: "Include Category 7, then open it under Data collection. Create a link, send it to employees, then apply. Apply fills distance-based rows from days, mode, and km. Fuel-based and average-data stay available if you have those inputs. Skip the survey only if you already have totals. Add another item for a group that did not take the survey, such as contractors.",
+    a: "Open Category 7 under Data collection and follow the four steps on that page. Create a link, share it with employees, apply the responses, then choose a calculation method. Fuel-based and average-data stay available after the survey. The full walkthrough is in How to fill Category 7 on this page.",
   },
   {
     q: "Why is Next locked on an activity form?",
@@ -122,6 +122,79 @@ export default function HelpPage() {
               </div>
             </li>
           ))}
+        </ol>
+      </section>
+
+      <section id="category-7" className="panel help-flow help-cat7">
+        <h3>How to fill Category 7 · Employee commuting</h3>
+        <p className="help-lede">
+          Open{" "}
+          <Link href="/activity?cat=7" className="help-link">
+            Employee commuting
+          </Link>{" "}
+          from Selected categories. Use the employee survey when you can. You can still pick Fuel-based or Average-data after the survey. Emission factors are assigned on the next page, not here.
+        </p>
+        <ol>
+          <li>
+            <span className="help-step" aria-hidden>
+              1
+            </span>
+            <div>
+              <p className="help-cat7-title">Employee commuting survey</p>
+              <p>
+                Enter how many employees to scale to, working weeks per year, and an optional close date. Create the campaign
+                and share the anonymous link. Responses do not change the inventory until you apply them.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span className="help-step" aria-hidden>
+              2
+            </span>
+            <div>
+              <p className="help-cat7-title">Survey data applied</p>
+              <p>
+                After people respond, apply the survey. That fills commuting groups from days, mode, and km. Those totals are
+                read-only. Do not re-enter group, mode, employees, distance, or commuting days.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span className="help-step" aria-hidden>
+              3
+            </span>
+            <div>
+              <p className="help-cat7-title">Calculation method</p>
+              <p>
+                Distance-based is selected because the survey collected days, mode, and km. You can switch to Fuel-based or
+                Average-data. If you do, the extra fields open under this step, not in the survey totals.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span className="help-step" aria-hidden>
+              4
+            </span>
+            <div>
+              <p className="help-cat7-title">Other commuting groups</p>
+              <p>
+                Add a group that did not take the survey, such as contractors. Skip this step if the survey covers everyone
+                you need to report.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span className="help-step" aria-hidden>
+              5
+            </span>
+            <div>
+              <p className="help-cat7-title">Save and continue</p>
+              <p>
+                Continue opens emission factors for Category 7. Bind a factor to each commuting group there. Until a factor is
+                assigned, that group stays at 0 tCO₂e in Results.
+              </p>
+            </div>
+          </li>
         </ol>
       </section>
 

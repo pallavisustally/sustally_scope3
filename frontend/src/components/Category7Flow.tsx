@@ -178,10 +178,11 @@ export function Category7Flow() {
             id="c7-step-1"
             title="Employee commuting survey"
             body="Collect commuting information directly from employees."
-            action={
-              <Link className="c7-learn" href="/help">
-                Learn more
-              </Link>
+            hint={
+              <>
+                (Still confused to fill the data? Then visit{" "}
+                <Link href="/help#category-7">Learn more</Link>.)
+              </>
             }
           />
           {!survey.companyReady ? (
@@ -224,7 +225,23 @@ export function Category7Flow() {
                 ) : null}
               </div>
               <div className="c7-linkbox">
-                <p>Survey link</p>
+                <div className="c7-link-head">
+                  <p>Survey link</p>
+                  <button
+                    type="button"
+                    className="c7-icon-btn"
+                    aria-label="Refresh survey responses"
+                    title="Refresh responses"
+                    disabled={survey.busy === "refresh" || survey.busy === "apply"}
+                    data-spin={survey.busy === "refresh" ? "true" : "false"}
+                    onClick={() => void survey.refresh()}
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                      <path d="M20 12a8 8 0 1 1-2.2-5.4" />
+                      <path d="M20 4v6h-6" />
+                    </svg>
+                  </button>
+                </div>
                 <div className="c7-link-row">
                   <code>
                     {survey.tokens[survey.latest.id]
@@ -544,12 +561,14 @@ function StepHeading({
   title,
   body,
   action,
+  hint,
 }: {
   n: number;
   id: string;
   title: string;
   body: string;
   action?: ReactNode;
+  hint?: ReactNode;
 }) {
   return (
     <div className="c7-step-head">
@@ -562,6 +581,7 @@ function StepHeading({
           {action}
         </div>
         <p>{body}</p>
+        {hint ? <p className="c7-learn-hint">{hint}</p> : null}
       </div>
     </div>
   );
@@ -586,12 +606,7 @@ function ScalingFields({
   return (
     <>
       <div className="field">
-        <label htmlFor="c7-headcount">
-          Employees to scale to
-          <span className="c7-info" title="Survey responses are scaled to this headcount.">
-            i
-          </span>
-        </label>
+        <label htmlFor="c7-headcount">Employees to scale to</label>
         <input
           id="c7-headcount"
           inputMode="numeric"
