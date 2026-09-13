@@ -4,6 +4,7 @@ import { EMISSION_FACTORS, SCOPE3_CATEGORIES, type EmissionFactor } from "@/data
 import { aggregateDqa, dqaPercent, scoreItemDqa, type DqaScores } from "@/lib/data-quality";
 import { convertSpend, factorCurrency, isSpendFactor } from "@/lib/fx";
 import type { ActivityItem, InventoryState } from "@/lib/inventory-types";
+import { isSupplierVerified } from "@/lib/supplier-verify";
 import {
   factorDenominator,
   factorIsTonnes,
@@ -39,6 +40,7 @@ export type ItemResult = {
   secondaryFactor?: EmissionFactor;
   spendConversion?: SpendConversion;
   dqa: DqaScores;
+  supplierVerified: boolean;
 };
 
 export type CategoryResult = {
@@ -64,6 +66,7 @@ export type InventoryResult = {
   supplierTco2e: number;
   secondaryTco2e: number;
   supplierSharePct: number;
+  unverifiedSupplierTco2e: number;
   upstreamTco2e: number;
   downstreamTco2e: number;
   categories: CategoryResult[];
@@ -562,6 +565,7 @@ export function calculateItem(
     steps = [`Not calculated: ${uniqueMissing.join(", ") || "missing inputs"}`];
   }
   const requiredCount = fieldsFor(categoryId, method).filter((field) => field.required && !field.optional).length;
+  const supplierVerified = isSupplierVerified(item.values);
   const dqa = scoreItemDqa({
     method,
     complete,
@@ -571,6 +575,7 @@ export function calculateItem(
     secondaryFactor,
     reportingYear: ctx.reportingYear,
     hq: ctx.hq,
+    supplierVerified,
   });
 
   return {
@@ -589,6 +594,7 @@ export function calculateItem(
     spendConversion,
     steps,
     dqa,
+    supplierVerified,
   };
 }
 
@@ -619,7 +625,12 @@ export function calculateInventory(state: InventoryState, catalog: EmissionFacto
     };
   });
   const totalTco2e = categories.reduce((sum, category) => sum + category.tco2e, 0);
-  const supplierTco2e = categories.reduce((sum, category) => sum + category.supplierTco2e, 0);
+  const claimedSupplierTco2e = categories.reduce((sum, category) => sum + category.supplierTco2e, 0);
+  const supplierTco2e = categories
+    .flatMap((category) => category.items)
+    .filter((item) => item.supplierVerified)
+    .reduce((sum, item) => sum + item.supplierTco2e, 0);
+  const unverifiedSupplierTco2e = Math.max(0, claimedSupplierTco2e - supplierTco2e);
   const secondaryTco2e = categories.reduce((sum, category) => sum + category.secondaryTco2e, 0);
   const biogenicTco2e = categories.reduce((sum, category) => sum + category.biogenicTco2e, 0);
   const upstreamTco2e = categories.filter((category) => category.stream === "upstream").reduce((sum, category) => sum + category.tco2e, 0);
@@ -636,6 +647,7 @@ export function calculateInventory(state: InventoryState, catalog: EmissionFacto
     supplierTco2e,
     secondaryTco2e,
     supplierSharePct: totalTco2e > 0 ? (supplierTco2e / totalTco2e) * 100 : 0,
+    unverifiedSupplierTco2e,
     upstreamTco2e,
     downstreamTco2e,
     categories,

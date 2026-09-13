@@ -43,6 +43,7 @@ const TEXT_FIELDS = new Set([
   "item",
   "description",
   "supplier",
+  "supplierEmail",
   "supplierProduct",
   "energyCarrier",
   "origin",

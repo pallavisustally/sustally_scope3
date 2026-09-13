@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { InventoryResult } from "@/lib/calculate";
 import type { InventoryState } from "@/lib/inventory-types";
-import { buildInventoryReport, type ReportFormat } from "@/lib/report-export";
+import { buildInventoryReport, type ReportFormat, type ReportOptions } from "@/lib/report-export";
 import { requireUser } from "@/lib/require-user";
 
 export const runtime = "nodejs";
@@ -15,11 +15,12 @@ export async function POST(request: Request) {
       results?: InventoryResult;
       format?: ReportFormat;
       includes?: string[];
+      options?: ReportOptions;
     };
     if (!body.state || !body.results || (body.format !== "pdf" && body.format !== "xlsx")) {
       return NextResponse.json({ error: "Missing inventory, results, or format." }, { status: 400 });
     }
-    const file = await buildInventoryReport(body.state, body.results, body.format, body.includes ?? []);
+    const file = await buildInventoryReport(body.state, body.results, body.format, body.includes ?? [], body.options ?? {});
     const copy = Buffer.from(file.bytes);
     return new NextResponse(copy, {
       headers: {

@@ -2,7 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Category7Flow } from "@/components/Category7Flow";
 import { CollectionTable } from "@/components/CollectionTable";
+import { SupplierVerifyActions } from "@/components/SupplierVerifyActions";
 import { useInventory } from "@/components/InventoryProvider";
 import { FooterNav, NoSelectedCategories, PageIntro } from "@/components/PageBits";
 import { fieldsFor, itemLabel } from "@/data/fields";
@@ -41,6 +43,8 @@ function ActivityForm({ requestedId }: { requestedId: number }) {
     }
   }, [requestedId, selected, setActiveCategory, state.activeCategoryId]);
 
+  if (requestedId === 7) return <Category7Flow />;
+
   const category = selected.find((row) => row.id === state.activeCategoryId) ?? selected.find((row) => row.id === requestedId) ?? selected[0];
   if (!category) return <NoSelectedCategories />;
   const entry = state.entries[category.id];
@@ -55,7 +59,7 @@ function ActivityForm({ requestedId }: { requestedId: number }) {
       <PageIntro
         kicker={`Category ${category.id}`}
         title={category.name}
-        body="Fields marked with * are required for calculation. Example text in fields is a hint only. Next stays locked until required fields are valid."
+        body="Fields marked with * are required for calculation. Example text in fields is a hint only. Next stays locked until required fields are valid. For supplier-specific or hybrid data, add a supplier email to send a confirmation."
       />
       <div className="panel">
         {showErrors && hasErrors ? (
@@ -145,9 +149,10 @@ function ActivityForm({ requestedId }: { requestedId: number }) {
                       ) : (
                         <input
                           id={inputId}
+                          type={field.id === "supplierEmail" ? "email" : "text"}
                           value={value}
                           placeholder={field.placeholder}
-                          inputMode={isNumberField(field) ? "decimal" : "text"}
+                          inputMode={field.id === "supplierEmail" ? "email" : isNumberField(field) ? "decimal" : "text"}
                           aria-invalid={error ? true : undefined}
                           aria-required={required || undefined}
                           onChange={(event) => onChange(event.target.value)}
@@ -158,6 +163,7 @@ function ActivityForm({ requestedId }: { requestedId: number }) {
                   );
                 })}
               </div>
+              <SupplierVerifyActions categoryId={category.id} itemId={item.id} method={entry.method} />
             </article>
           ))}
         </div>

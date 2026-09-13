@@ -34,6 +34,7 @@ export const CATEGORY_FIELDS: Record<number, ActivityField[]> = {
     field("currency", "Currency", { type: "select", required: true, options: CURRENCIES, methods: ["spend-based", "hybrid"] }),
     field("spendSector", "EEIO sector", { type: "select", optional: true, options: ["Basic metals", "Chemicals", "Paper", "IT services", "Professional services", "Other"], methods: ["spend-based"] }),
     field("supplier", "Supplier", { optional: true, wide: true }),
+    field("supplierEmail", "Supplier email", { optional: true, placeholder: "e.g. sustainability@supplier.com" }),
     field("supplierProduct", "Supplier product or SKU", { optional: true, methods: ["supplier-specific", "hybrid"] }),
   ],
   2: [
@@ -45,6 +46,7 @@ export const CATEGORY_FIELDS: Record<number, ActivityField[]> = {
     field("spend", "Amount spent", { required: true, placeholder: "e.g. 18500000", methods: ["spend-based", "hybrid"] }),
     field("currency", "Currency", { type: "select", required: true, options: CURRENCIES, methods: ["spend-based", "hybrid"] }),
     field("supplier", "Supplier", { optional: true, wide: true }),
+    field("supplierEmail", "Supplier email", { optional: true, placeholder: "e.g. sustainability@supplier.com" }),
   ],
   3: [
     field("activityType", "Activity type", {
@@ -57,6 +59,7 @@ export const CATEGORY_FIELDS: Record<number, ActivityField[]> = {
     field("unit", "Unit", { type: "select", required: true, options: ENERGY_UNITS }),
     field("gridRegion", "Grid or fuel region", { optional: true, placeholder: "e.g. India, EU, US grid" }),
     field("supplier", "Fuel or utility supplier", { optional: true, methods: ["supplier-specific"], wide: true }),
+    field("supplierEmail", "Supplier email", { optional: true, methods: ["supplier-specific"], placeholder: "e.g. sustainability@utility.com" }),
   ],
   4: [
     field("item", "Shipment or lane", { required: true, placeholder: "e.g. Inbound steel coil, inter-facility transfer" }),
@@ -81,6 +84,7 @@ export const CATEGORY_FIELDS: Record<number, ActivityField[]> = {
     field("unit", "Unit", { type: "select", required: true, options: ["Tonnes", "Kilograms", "Cubic metres"] }),
     field("treatmentMethod", "Treatment method", { type: "select", optional: true, options: TREATMENTS, methods: ["supplier-specific", "waste-type"] }),
     field("treatmentProvider", "Treatment provider", { optional: true, methods: ["supplier-specific"], wide: true }),
+    field("supplierEmail", "Provider email", { optional: true, methods: ["supplier-specific"], placeholder: "e.g. contact@waste-provider.com" }),
   ],
   6: [
     field("item", "Travel activity", { required: true, placeholder: "e.g. Short-haul flights, rail, taxi" }),
@@ -223,7 +227,7 @@ export function fieldsFor(categoryId: number, method: string) {
     );
   }
   extras.push(
-    field("biogenicTco2e", "Emission factor by supplier (tCO₂)", {
+    field("biogenicTco2e", "Biogenic CO₂ (tCO₂, reported separately)", {
       optional: true,
       placeholder: "e.g. 12.5 · reported separately, not added to scope 3 total",
     }),
@@ -236,6 +240,7 @@ export function blankValues(categoryId: number): Record<string, string> {
   ids.add("primarySharePct");
   ids.add("fxRate");
   ids.add("biogenicTco2e");
+  ids.add("supplierEmail");
   return Object.fromEntries([...ids].map((id) => [id, ""]));
 }
 

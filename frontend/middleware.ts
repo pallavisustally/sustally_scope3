@@ -7,6 +7,10 @@ const PUBLIC_PATHS = new Set(["/", "/reset-password"]);
 function isPublic(pathname: string) {
   if (PUBLIC_PATHS.has(pathname)) return true;
   if (pathname.startsWith("/api/auth/")) return true;
+  if (pathname.startsWith("/s/")) return true;
+  if (pathname.startsWith("/v/")) return true;
+  if (pathname.startsWith("/api/surveys/public/")) return true;
+  if (pathname.startsWith("/api/supplier-verifications/public/")) return true;
   return false;
 }
 

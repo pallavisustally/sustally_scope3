@@ -273,14 +273,15 @@ export function isNavChildActive(pathname: string, href: string) {
 }
 
 export function collectionTrail(pathname: string, cat: string | null) {
+  const hub = { href: CATEGORY_DATA_HREF, label: CATEGORY_DATA_LABEL };
   if (pathname === "/activity/review") return [{ href: "/activity/review", label: "Review" }];
   if (pathname === "/activity/factors") {
-    return [{ href: cat ? `/activity/factors?cat=${cat}` : "/activity/factors", label: "Emission Factors" }];
+    return [hub, { href: cat ? `/activity/factors?cat=${cat}` : "/activity/factors", label: "Emission Factors" }];
   }
   if ((pathname === "/activity" && cat) || pathname === "/activity/method") {
-    return [{ href: cat ? `/activity?cat=${cat}` : "/activity", label: "Activity Data" }];
+    return [hub, { href: cat ? `/activity?cat=${cat}` : "/activity", label: "Activity Data" }];
   }
-  return [];
+  return [hub];
 }
 
 export type NavLeaf = {
@@ -317,7 +318,10 @@ export const NAV_MAIN: NavItem[] = [
     id: "activity",
     label: "Data collection",
     icon: "/activity",
-    children: [{ href: "/activity/review", label: "Review", icon: "/activity/review" }],
+    children: [
+      { href: CATEGORY_DATA_HREF, label: CATEGORY_DATA_LABEL, icon: "/activity" },
+      { href: "/activity/review", label: "Review", icon: "/activity/review" },
+    ],
   },
   {
     id: "reporting",

@@ -39,7 +39,14 @@ function CategoryWorking({ category }: { category: CategoryResult }) {
         {category.items.map((item) => (
           <div key={item.itemId} className="results-item" data-complete={item.complete ? "true" : "false"}>
             <div className="results-item-head">
-              <p>{item.label}</p>
+              <p>
+                {item.label}
+                {item.supplierVerified ? (
+                  <span className="status-pill ml-2" data-tone="ok">
+                    Verified by supplier
+                  </span>
+                ) : null}
+              </p>
               <p className="results-num">{formatTco2e(item.tco2e)} tCO₂e</p>
             </div>
             <ul>
@@ -100,7 +107,7 @@ export default function ResultsPage() {
       <PageIntro
         kicker="Report view"
         title="Results"
-        body="Each complete activity item is calculated as activity data × emission factor, converted to tCO₂e. Optional labels and classification fields can stay empty."
+        body="Each complete activity item is calculated as activity data × emission factor, converted to tCO₂e. Optional labels and classification fields can stay empty. Supplier-specific share and the high reliability score apply after the supplier confirms the row."
       />
       <p className="results-edit-note">
         Note: if you also want to edit values, go to <Link href="/activity">Data collection</Link> and edit them there.
@@ -137,15 +144,20 @@ export default function ResultsPage() {
             <dd>{formatTco2e(results.downstreamTco2e)} tCO₂e</dd>
           </div>
           <div>
-            <dt>Supplier-specific</dt>
+            <dt>Supplier-specific (verified)</dt>
             <dd>{formatShare(results.supplierSharePct)}</dd>
           </div>
           <div>
-            <dt>Emission factor by supplier</dt>
+            <dt>Biogenic CO₂ (reported separately)</dt>
             <dd>{formatTco2e(results.biogenicTco2e)} tCO₂</dd>
           </div>
         </dl>
       </article>
+      {results.unverifiedSupplierTco2e > 0 ? (
+        <p className="mt-3 text-[13px] text-[var(--muted)]">
+          {formatTco2e(results.unverifiedSupplierTco2e)} tCO₂e of company-entered supplier-specific data is not yet verified, so it is excluded from the supplier share and the reliability score of 5.
+        </p>
+      ) : null}
 
       {results.includedCount === 0 ? (
         <p className="form-alert mt-4" role="status">

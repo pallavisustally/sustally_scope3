@@ -9,6 +9,8 @@ import { useCurrentUser } from "./CurrentUser";
 import type { CategoryStep, InventoryState } from "@/lib/inventory-types";
 import type { AppNotification } from "@/lib/notifications";
 import { inventoryNotifications } from "@/lib/notifications";
+import { mergeCommuteSurveyItems, type CommuteSurveyItemValues } from "@/lib/commute-survey";
+import { clearVerificationOnEdit, mergeSupplierVerifications, type StoredSupplierVerification } from "@/lib/supplier-verify";
 
 export type { ActivityItem, CategoryEntry, CategoryStep, InventoryState } from "@/lib/inventory-types";
 
@@ -57,6 +59,7 @@ type InventoryContextValue = {
   newInventory: (mode?: "blank" | "next-year") => void;
   refreshInventories: () => Promise<void>;
   pushNotice: (notice: AppNotification) => void;
+  applyCommuteSurveyItems: (surveyId: string, items: CommuteSurveyItemValues[]) => void;
 };
 
 const InventoryContext = createContext<InventoryContextValue | null>(null);
@@ -133,6 +136,29 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, [pushNotice, rememberSession, userId]);
+
+  useEffect(() => {
+    if (!ready || !state.sessionKey) return;
+    let cancelled = false;
+    async function pull() {
+      try {
+        const response = await fetch(`/api/supplier-verifications?sessionKey=${encodeURIComponent(state.sessionKey)}`, {
+          cache: "no-store",
+        });
+        const payload = (await response.json().catch(() => ({}))) as { verifications?: StoredSupplierVerification[] };
+        if (cancelled || !Array.isArray(payload.verifications)) return;
+        setFull((current) => mergeSupplierVerifications(current, payload.verifications ?? []));
+      } catch {
+        /* keep local state */
+      }
+    }
+    void pull();
+    const timer = window.setInterval(() => void pull(), 12000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [ready, state.sessionKey]);
 
   useEffect(() => {
     if (!ready) return;
@@ -268,14 +294,27 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       setJustification: (id: number, value: string) =>
         setFull((current) => ({ ...current, justifications: { ...current.justifications, [id]: value } })),
       setActiveCategory: (id: number) => setFull((current) => ({ ...current, activeCategoryId: id })),
-      setCategoryMethod: (id: number, method: string) =>
-        setFull((current) => ({
-          ...current,
-          entries: {
-            ...current.entries,
-            [id]: { ...(current.entries[id] ?? makeEntry(id)), method },
-          },
-        })),
+      setCategoryMethod: (id, method) =>
+        setFull((current) => {
+          const entry = current.entries[id] ?? makeEntry(id);
+          const items =
+            id === 7 && method === "average-data"
+              ? entry.items.map((item) => ({
+                  ...item,
+                  values: {
+                    ...item.values,
+                    headcount: item.values.headcount || item.values.employees,
+                  },
+                }))
+              : entry.items;
+          return {
+            ...current,
+            entries: {
+              ...current.entries,
+              [id]: { ...entry, method, items },
+            },
+          };
+        }),
       updateItemValues: (categoryId: number, itemId: string, patch: Record<string, string>) =>
         setFull((current) => {
           const entry = current.entries[categoryId] ?? makeEntry(categoryId);
@@ -285,7 +324,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
               ...current.entries,
               [categoryId]: {
                 ...entry,
-                items: entry.items.map((item) => (item.id === itemId ? { ...item, values: { ...item.values, ...patch } } : item)),
+                items: entry.items.map((item) =>
+                  item.id === itemId ? { ...item, values: clearVerificationOnEdit(item.values, patch) } : item,
+                ),
               },
             },
           };
@@ -364,6 +405,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       newInventory,
       refreshInventories,
       pushNotice,
+      applyCommuteSurveyItems: (surveyId, items) =>
+        setFull((current) => mergeCommuteSurveyItems(current, surveyId, items)),
     }),
     [state, factors, results, ready, syncStatus, savedInventories, notices, openInventory, newInventory, refreshInventories, pushNotice],
   );

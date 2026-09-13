@@ -13,6 +13,9 @@ import { ActivityItems } from "./collections/ActivityItems";
 import { EmissionFactors } from "./collections/EmissionFactors";
 import { InventoryResults } from "./collections/InventoryResults";
 import { Reports } from "./collections/Reports";
+import { CommuteSurveys } from "./collections/CommuteSurveys";
+import { CommuteResponses } from "./collections/CommuteResponses";
+import { SupplierVerifications } from "./collections/SupplierVerifications";
 import { seedEmissionFactors } from "./seed";
 
 const filename = fileURLToPath(import.meta.url);
@@ -52,7 +55,19 @@ export default buildConfig({
       titleSuffix: " · Sustally Payload",
     },
   },
-  collections: [Users, AppUsers, Companies, CategorySelections, ActivityItems, EmissionFactors, InventoryResults, Reports],
+  collections: [
+    Users,
+    AppUsers,
+    Companies,
+    CategorySelections,
+    ActivityItems,
+    EmissionFactors,
+    InventoryResults,
+    Reports,
+    CommuteSurveys,
+    CommuteResponses,
+    SupplierVerifications,
+  ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || "sustally-scope3-dev-secret-change-me",
   typescript: {

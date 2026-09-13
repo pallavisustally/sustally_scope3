@@ -64,9 +64,10 @@ function completenessScore(complete: boolean, missingCount: number, requiredCoun
   return clampScore(1 + (filled / requiredCount) * 4);
 }
 
-function reliabilityScore(factor: EmissionFactor | undefined, method: string) {
+function reliabilityScore(factor: EmissionFactor | undefined, method: string, supplierVerified: boolean) {
   const source = (factor?.source ?? "").toLowerCase();
-  if (source.includes("supplier") || method === "supplier-specific") return 5;
+  const supplierMethod = method === "supplier-specific" || method === "hybrid" || source.includes("supplier");
+  if (supplierMethod) return supplierVerified ? 5 : 3;
   if (["defra", "epa", "iea", "ecoinvent", "cea", "crrem"].some((token) => source.includes(token))) return 4;
   if (source.includes("eeio") || method === "spend-based") return 2;
   if (factor) return 3;
@@ -82,13 +83,14 @@ export function scoreItemDqa(input: {
   secondaryFactor?: EmissionFactor;
   reportingYear: string;
   hq: string;
+  supplierVerified?: boolean;
 }): DqaScores {
   const factor = input.factor ?? input.secondaryFactor;
   const technology = technologyScore(input.method);
   const time = timeScore(factor?.year, input.reportingYear);
   const geography = geographyScore(factor?.region, input.hq);
   const completeness = completenessScore(input.complete, input.missingCount, input.requiredCount);
-  const reliability = reliabilityScore(factor, input.method);
+  const reliability = reliabilityScore(factor, input.method, Boolean(input.supplierVerified));
   const overall = (technology + time + geography + completeness + reliability) / 5;
   return { technology, time, geography, completeness, reliability, overall };
 }

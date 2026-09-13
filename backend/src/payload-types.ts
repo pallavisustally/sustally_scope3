@@ -75,6 +75,9 @@ export interface Config {
     'emission-factors': EmissionFactor;
     'inventory-results': InventoryResult;
     reports: Report;
+    'commute-surveys': CommuteSurvey;
+    'commute-responses': CommuteResponse;
+    'supplier-verifications': SupplierVerification;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -90,6 +93,9 @@ export interface Config {
     'emission-factors': EmissionFactorsSelect<false> | EmissionFactorsSelect<true>;
     'inventory-results': InventoryResultsSelect<false> | InventoryResultsSelect<true>;
     reports: ReportsSelect<false> | ReportsSelect<true>;
+    'commute-surveys': CommuteSurveysSelect<false> | CommuteSurveysSelect<true>;
+    'commute-responses': CommuteResponsesSelect<false> | CommuteResponsesSelect<true>;
+    'supplier-verifications': SupplierVerificationsSelect<false> | SupplierVerificationsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -311,6 +317,83 @@ export interface Report {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "commute-surveys".
+ */
+export interface CommuteSurvey {
+  id: string;
+  company: string | Company;
+  tokenHash: string;
+  tokenSuffix?: string | null;
+  status: 'open' | 'closed';
+  headcount: number;
+  weeksPerYear?: number | null;
+  closeAt?: string | null;
+  reportingYear?: number | null;
+  createdBy?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "commute-responses".
+ */
+export interface CommuteResponse {
+  id: string;
+  survey: string | CommuteSurvey;
+  commuteDays: number;
+  wfhDays: number;
+  offDays: number;
+  mode?: string | null;
+  oneWayKm?: number | null;
+  region?: string | null;
+  workplaceType?: string | null;
+  submittedAt: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "supplier-verifications".
+ */
+export interface SupplierVerification {
+  id: string;
+  company: string | Company;
+  tokenHash: string;
+  tokenSuffix?: string | null;
+  status: 'pending' | 'verified' | 'superseded';
+  clientItemId: string;
+  categoryId: number;
+  method: string;
+  supplierEmail: string;
+  supplierName?: string | null;
+  itemLabel?: string | null;
+  sentHash?: string | null;
+  snapshot?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  confirmedValues?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  edited?: boolean | null;
+  verifiedAt?: string | null;
+  createdBy?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -364,6 +447,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'reports';
         value: string | Report;
+      } | null)
+    | ({
+        relationTo: 'commute-surveys';
+        value: string | CommuteSurvey;
+      } | null)
+    | ({
+        relationTo: 'commute-responses';
+        value: string | CommuteResponse;
+      } | null)
+    | ({
+        relationTo: 'supplier-verifications';
+        value: string | SupplierVerification;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -534,6 +629,64 @@ export interface ReportsSelect<T extends boolean = true> {
   format?: T;
   includes?: T;
   totalTco2e?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "commute-surveys_select".
+ */
+export interface CommuteSurveysSelect<T extends boolean = true> {
+  company?: T;
+  tokenHash?: T;
+  tokenSuffix?: T;
+  status?: T;
+  headcount?: T;
+  weeksPerYear?: T;
+  closeAt?: T;
+  reportingYear?: T;
+  createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "commute-responses_select".
+ */
+export interface CommuteResponsesSelect<T extends boolean = true> {
+  survey?: T;
+  commuteDays?: T;
+  wfhDays?: T;
+  offDays?: T;
+  mode?: T;
+  oneWayKm?: T;
+  region?: T;
+  workplaceType?: T;
+  submittedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "supplier-verifications_select".
+ */
+export interface SupplierVerificationsSelect<T extends boolean = true> {
+  company?: T;
+  tokenHash?: T;
+  tokenSuffix?: T;
+  status?: T;
+  clientItemId?: T;
+  categoryId?: T;
+  method?: T;
+  supplierEmail?: T;
+  supplierName?: T;
+  itemLabel?: T;
+  sentHash?: T;
+  snapshot?: T;
+  confirmedValues?: T;
+  edited?: T;
+  verifiedAt?: T;
+  createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }

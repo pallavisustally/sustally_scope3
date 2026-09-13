@@ -53,6 +53,11 @@ export default function ReviewPage() {
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <p className="text-[13px] font-semibold">
                           Item {index + 1}: {itemLabel(item.values)}
+                          {itemResult?.supplierVerified ? (
+                            <span className="status-pill ml-2" data-tone="ok">
+                              Verified by supplier
+                            </span>
+                          ) : null}
                         </p>
                         <p className="text-[13px] font-semibold">{formatTco2e(itemResult?.tco2e ?? 0)} tCO₂e</p>
                       </div>
@@ -105,7 +110,7 @@ export default function ReviewPage() {
                         ) : null}
                         {itemResult && itemResult.biogenicTco2e > 0 ? (
                           <div className="grid grid-cols-[180px_1fr] gap-4">
-                            <dt className="text-[13px] text-[var(--muted)]">Emission factor by supplier</dt>
+                            <dt className="text-[13px] text-[var(--muted)]">Biogenic CO₂ (reported separately)</dt>
                             <dd className="font-medium">{formatTco2e(itemResult.biogenicTco2e)} tCO₂ (not in scope 3 total)</dd>
                           </div>
                         ) : null}
@@ -128,7 +133,7 @@ export default function ReviewPage() {
           {results.totalItems !== results.completeItems
             ? ` · ${results.totalItems - results.completeItems} still missing required inputs`
             : ""}
-          {results.biogenicTco2e > 0 ? ` · emission factor by supplier ${formatTco2e(results.biogenicTco2e)} tCO₂ reported separately` : ""}
+          {results.biogenicTco2e > 0 ? ` · biogenic CO₂ ${formatTco2e(results.biogenicTco2e)} tCO₂ reported separately` : ""}
           .
         </p>
       </div>

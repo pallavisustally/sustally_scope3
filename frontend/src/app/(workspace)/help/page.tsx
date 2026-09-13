@@ -21,7 +21,7 @@ const STEPS = [
   {
     href: "/activity",
     label: "Data collection",
-    detail: "Open a category, pick a calculation method, enter activity data, then assign emission factors. Fields marked * are required. Next stays locked until those fields are valid.",
+    detail: "Open a category, pick a calculation method, enter activity data, then assign emission factors. If Category 7 is included, the commuting survey appears on that category page before the method picker. For supplier-specific or hybrid rows, add an optional supplier email and send a confirmation.",
   },
   {
     href: "/activity/review",
@@ -36,11 +36,19 @@ const STEPS = [
   {
     href: "/reports",
     label: "Reports",
-    detail: "Download PDF, Excel, or CSV with the sections you tick: methods, exclusions, data quality, and category results.",
+    detail: "Download PDF or Excel with the sections you tick: boundary, methods, calculation working, completeness, exclusions, data quality, and category results.",
   },
 ];
 
 const QUESTIONS = [
+  {
+    q: "How does supplier confirmation work?",
+    a: "The company person still enters the data. Add the supplier email on that row (optional), then send a confirmation. The supplier opens a link with no login, accepts the figures or edits them, and confirms. The item then shows Verified by supplier. Only verified rows use the supplier share and the high reliability score in Results and Reports.",
+  },
+  {
+    q: "How does the commuting survey work?",
+    a: "Include Category 7, then open it under Data collection. Create a link, send it to employees, then apply. Apply fills distance-based rows from days, mode, and km. Fuel-based and average-data stay available if you have those inputs. Skip the survey only if you already have totals. Add another item for a group that did not take the survey, such as contractors.",
+  },
   {
     q: "Why is Next locked on an activity form?",
     a: "A required field is empty or not a valid number, or the selected method still needs an emission factor. Example text in fields is a hint only. Fill the marked fields, then try again.",
@@ -59,7 +67,7 @@ const QUESTIONS = [
   },
   {
     q: "Which calculation method should I pick?",
-    a: "Prefer supplier-specific data when you have it. Hybrid fills gaps with secondary data. Average-data uses physical quantities. Spend-based uses economic value and EEIO factors and scores lower on data quality. Each category lists the methods the Technical Guidance allows.",
+    a: "Prefer supplier-specific data when you have it, then ask the supplier to confirm. Hybrid fills gaps with secondary data. Average-data uses physical quantities. Spend-based uses economic value and EEIO factors and scores lower on data quality. Each category lists the methods the Technical Guidance allows.",
   },
   {
     q: "Where do I change the theme?",
