@@ -8,5 +8,6 @@ export async function POST() {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const dest = new URL("/", url.origin);
-  return clearSessionCookie(NextResponse.redirect(dest));
+  const response: NextResponse = clearSessionCookie(NextResponse.redirect(dest));
+  return response;
 }

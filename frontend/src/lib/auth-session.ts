@@ -1,3 +1,5 @@
+import type { NextResponse } from "next/server";
+
 export const SESSION_COOKIE = "sustally_session";
 export const SESSION_DAYS = 7;
 
@@ -73,7 +75,7 @@ export function sessionCookieOptions() {
   };
 }
 
-export function clearSessionCookie(response: { cookies: { set: (name: string, value: string, options: Record<string, unknown>) => unknown } }) {
+export function clearSessionCookie<T extends NextResponse>(response: T): T {
   response.cookies.set(SESSION_COOKIE, "", {
     ...sessionCookieOptions(),
     maxAge: 0,

@@ -13,17 +13,8 @@ const internalSecretStrategy: AuthStrategy = {
       pagination: false,
     });
     const doc = existing.docs[0];
-    if (doc) {
-      return { user: { ...doc, collection: "users", _strategy: "internal-secret" } };
-    }
-    return {
-      user: {
-        id: "internal",
-        collection: "users",
-        email: "internal@sustally.local",
-        _strategy: "internal-secret",
-      },
-    };
+    if (!doc) return { user: null };
+    return { user: { ...doc, collection: "users" as const, _strategy: "internal-secret" } };
   },
 };
 
