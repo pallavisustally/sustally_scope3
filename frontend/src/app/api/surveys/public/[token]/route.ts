@@ -55,8 +55,24 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     if (surveyIsClosed(survey.status, survey.closeAt)) {
       return NextResponse.json({ error: "This survey is closed." }, { status: 410 });
     }
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-    const parsed = validateCommuteResponse(body);
+    const body = (await request.json().catch(() => ({}))) as {
+      commuteDays?: unknown;
+      wfhDays?: unknown;
+      offDays?: unknown;
+      mode?: unknown;
+      oneWayKm?: unknown;
+      region?: unknown;
+      workplaceType?: unknown;
+    };
+    const parsed = validateCommuteResponse({
+      commuteDays: body.commuteDays,
+      wfhDays: body.wfhDays,
+      offDays: body.offDays,
+      mode: body.mode,
+      oneWayKm: body.oneWayKm,
+      region: body.region,
+      workplaceType: body.workplaceType,
+    });
     if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
     const saved = await createCommuteResponse({
       surveyId: survey.id,

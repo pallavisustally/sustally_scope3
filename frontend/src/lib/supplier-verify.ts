@@ -123,8 +123,8 @@ export function overlayVerificationOnValues(values: Record<string, string>, row:
   if (row.status === "pending" && (activityValuesHash(values) === row.sentHash || !values.supplierVerificationStatus)) {
     return {
       ...values,
-      supplierEmail: values.supplierEmail || row.supplierEmail,
       ...verificationFlags(row),
+      supplierEmail: values.supplierEmail || row.supplierEmail,
     };
   }
   return values;

@@ -294,7 +294,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       setJustification: (id: number, value: string) =>
         setFull((current) => ({ ...current, justifications: { ...current.justifications, [id]: value } })),
       setActiveCategory: (id: number) => setFull((current) => ({ ...current, activeCategoryId: id })),
-      setCategoryMethod: (id, method) =>
+      setCategoryMethod: (id: number, method: string) =>
         setFull((current) => {
           const entry = current.entries[id] ?? makeEntry(id);
           const items =
@@ -405,7 +405,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       newInventory,
       refreshInventories,
       pushNotice,
-      applyCommuteSurveyItems: (surveyId, items) =>
+      applyCommuteSurveyItems: (surveyId: string, items: CommuteSurveyItemValues[]) =>
         setFull((current) => mergeCommuteSurveyItems(current, surveyId, items)),
     }),
     [state, factors, results, ready, syncStatus, savedInventories, notices, openInventory, newInventory, refreshInventories, pushNotice],
