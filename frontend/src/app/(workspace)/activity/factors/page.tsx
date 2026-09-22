@@ -17,7 +17,7 @@ import {
 } from "@/lib/custom-factor";
 import { factorGaps, factorsReady, hybridFactorNeeds, methodNeedsFactor } from "@/lib/validate-activity";
 
-export function emptyCustomFactorDraftFrom(current?: Partial<CustomFactorDraft>): CustomFactorDraft {
+function emptyCustomFactorDraftFrom(current?: Partial<CustomFactorDraft>): CustomFactorDraft {
   return {
     factor: current?.factor ?? "",
     unit: current?.unit ?? "",
