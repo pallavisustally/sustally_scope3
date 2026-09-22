@@ -292,17 +292,12 @@ export async function findUserById(id: string) {
 export async function findUserForReset(identifier: string) {
   const email = normalizeEmail(identifier);
   const phone = normalizePhone(identifier);
-  try {
-    return (
-      (isEmail(email) ? await findByField("email", email) : null) ??
-      (phone ? await findByField("phone", phone) : null) ??
-      (await listAppUsers()).find((row) => row.email === email || phoneMatches(row.phone, phone)) ??
-      null
-    );
-  } catch (error) {
-    console.error("findUserForReset failed", error);
-    return null;
-  }
+  return (
+    (isEmail(email) ? await findByField("email", email) : null) ??
+    (phone ? await findByField("phone", phone) : null) ??
+    (await listAppUsers()).find((row) => row.email === email || phoneMatches(row.phone, phone)) ??
+    null
+  );
 }
 
 export async function setResetToken(userId: string) {

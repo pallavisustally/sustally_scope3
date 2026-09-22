@@ -3,12 +3,13 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { BrandWordmark, ThemeToggle } from "@/components/Brand";
+import { formatReportingYear, reportingYearStart } from "@/lib/reporting-year";
 
 type PublicField = {
   id: string;
   label: string;
-  type: "text" | "select" | "textarea";
-  options: string[];
+  type: "text" | "select" | "textarea" | "year";
+  options: { value: string; label: string }[];
   placeholder: string;
   value: string;
 };
@@ -145,27 +146,28 @@ export default function SupplierConfirmPage() {
               <div className="mt-5 grid gap-4">
                 {meta.fields.map((field) => {
                   const value = values[field.id] ?? "";
+                  const display = field.type === "year" ? formatReportingYear(value) || value : value;
                   if (!editing) {
                     return (
                       <div key={field.id} className="grid grid-cols-[160px_1fr] gap-3 border-b border-[var(--line)] pb-3 last:border-0">
                         <p className="text-[13px] text-[var(--muted)]">{field.label}</p>
-                        <p className="font-medium">{value || "—"}</p>
+                        <p className="font-medium">{display || "—"}</p>
                       </div>
                     );
                   }
                   return (
                     <div key={field.id} className="field">
                       <label htmlFor={`v-${field.id}`}>{field.label}</label>
-                      {field.type === "select" ? (
+                      {field.type === "select" || field.type === "year" ? (
                         <select
                           id={`v-${field.id}`}
-                          value={value}
+                          value={field.type === "year" ? reportingYearStart(value) : value}
                           onChange={(event) => setValues((current) => ({ ...current, [field.id]: event.target.value }))}
                         >
                           <option value="">Select</option>
                           {field.options.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
+                            <option key={option.value} value={option.value}>
+                              {option.label}
                             </option>
                           ))}
                         </select>

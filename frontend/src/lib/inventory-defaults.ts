@@ -12,9 +12,9 @@ export function emptyCategories(): Record<number, Inclusion> {
   return Object.fromEntries(SCOPE3_CATEGORIES.map((category) => [category.id, "excluded"])) as Record<number, Inclusion>;
 }
 
-export function makeItem(categoryId: number, index = 1): ActivityItem {
+export function makeItem(categoryId: number, index = 1, method?: string): ActivityItem {
   return {
-    id: `c${categoryId}-${index}`,
+    id: method ? `c${categoryId}-${method}-${index}` : `c${categoryId}-${index}`,
     factorId: "",
     secondaryFactorId: "",
     values: blankValues(categoryId),
@@ -26,9 +26,10 @@ export function defaultMethod(categoryId: number) {
 }
 
 export function makeEntry(categoryId: number): CategoryEntry {
+  const method = defaultMethod(categoryId);
   return {
-    method: defaultMethod(categoryId),
-    items: [makeItem(categoryId, 1)],
+    method,
+    items: [makeItem(categoryId, 1, method)],
     activityDone: false,
     methodDone: false,
     factorsDone: false,

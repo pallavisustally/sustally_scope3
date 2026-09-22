@@ -1,13 +1,16 @@
+import { formatReportingYear } from "@/lib/reporting-year";
+
 export type ActivityField = {
   id: string;
   label: string;
-  type: "text" | "select" | "textarea";
+  type: "text" | "select" | "textarea" | "year";
   required?: boolean;
   optional?: boolean;
   placeholder?: string;
   options?: string[];
   methods?: string[];
   wide?: boolean;
+  visibleWhen?: { mode?: string[] };
 };
 
 const CURRENCIES = ["INR", "USD", "EUR", "GBP"];
@@ -40,7 +43,7 @@ export const CATEGORY_FIELDS: Record<number, ActivityField[]> = {
   2: [
     field("item", "Capital good", { required: true, placeholder: "e.g. CNC machine, building, vehicle fleet" }),
     field("assetClass", "Asset class", { type: "select", options: ["Buildings", "Machinery", "Vehicles", "IT equipment", "Furniture", "Other"] }),
-    field("yearAcquired", "Year of acquisition", { placeholder: "e.g. 2024" }),
+    field("yearAcquired", "Year of supply", { type: "year" }),
     field("quantity", "Quantity", { required: true, placeholder: "e.g. 2", methods: ["supplier-specific", "hybrid", "average-data"] }),
     field("unit", "Unit", { type: "select", required: true, options: ["Units", "Tonnes", "Kilograms", "m²"], methods: ["supplier-specific", "hybrid", "average-data"] }),
     field("spend", "Amount spent", { required: true, placeholder: "e.g. 18500000", methods: ["spend-based", "hybrid"] }),
@@ -83,16 +86,29 @@ export const CATEGORY_FIELDS: Record<number, ActivityField[]> = {
     field("quantity", "Quantity", { required: true, placeholder: "e.g. 120" }),
     field("unit", "Unit", { type: "select", required: true, options: ["Tonnes", "Kilograms", "Cubic metres"] }),
     field("treatmentMethod", "Treatment method", { type: "select", optional: true, options: TREATMENTS, methods: ["supplier-specific", "waste-type"] }),
-    field("treatmentProvider", "Treatment provider", { optional: true, methods: ["supplier-specific"], wide: true }),
-    field("supplierEmail", "Provider email", { optional: true, methods: ["supplier-specific"], placeholder: "e.g. contact@waste-provider.com" }),
+    field("treatmentProvider", "Vendor name", { optional: true, methods: ["supplier-specific"], wide: true, placeholder: "e.g. waste vendor name" }),
+    field("supplierEmail", "Vendor email", { optional: true, methods: ["supplier-specific"], placeholder: "e.g. contact@vendor.com" }),
   ],
   6: [
-    field("item", "Travel activity", { required: true, placeholder: "e.g. Short-haul flights, rail, taxi" }),
-    field("mode", "Travel mode", { type: "select", optional: true, options: TRAVEL_MODES }),
+    field("item", "Travel activity", { required: true, placeholder: "e.g. Mumbai sales visits, annual conference" }),
+    field("mode", "Travel mode", { type: "select", required: true, options: TRAVEL_MODES }),
     field("fuelType", "Fuel type", { type: "select", optional: true, options: ["Jet fuel", "Diesel", "Petrol", "Electricity"], methods: ["fuel-based"] }),
     field("fuelQuantity", "Fuel consumed", { required: true, placeholder: "e.g. 8000", methods: ["fuel-based"] }),
     field("fuelUnit", "Fuel unit", { type: "select", required: true, options: ["Litres", "Kilograms", "kWh"], methods: ["fuel-based"] }),
-    field("cabinClass", "Cabin or vehicle class", { type: "select", optional: true, options: ["Economy", "Premium economy", "Business", "First", "Average car", "Not applicable"], methods: ["distance-based"] }),
+    field("haulLength", "Haul length", {
+      type: "select",
+      required: true,
+      options: ["Domestic", "Short-haul", "Long-haul"],
+      methods: ["distance-based"],
+      visibleWhen: { mode: ["Air"] },
+    }),
+    field("cabinClass", "Cabin class", {
+      type: "select",
+      required: true,
+      options: ["Economy", "Premium economy", "Business", "First"],
+      methods: ["distance-based"],
+      visibleWhen: { mode: ["Air"] },
+    }),
     field("distance", "Distance", { required: true, placeholder: "e.g. 185000", methods: ["distance-based"] }),
     field("distanceUnit", "Distance unit", { type: "select", required: true, options: ["pkm", "km", "miles"], methods: ["distance-based"] }),
     field("trips", "Number of trips", { optional: true, placeholder: "e.g. 420", methods: ["distance-based"] }),
@@ -103,7 +119,7 @@ export const CATEGORY_FIELDS: Record<number, ActivityField[]> = {
   ],
   7: [
     field("item", "Commuting group", { required: true, placeholder: "e.g. All employees, office A, contractors" }),
-    field("mode", "Primary mode", { type: "select", optional: true, options: ["Car", "Two-wheeler", "Bus", "Metro / rail", "Walk / cycle", "Mixed"], methods: ["fuel-based", "distance-based"] }),
+    field("mode", "Primary mode", { type: "select", optional: true, options: ["Car", "Two-wheeler", "Bus", "Metro / rail", "Walk / cycle", "Work from home / no commute", "Mixed"], methods: ["fuel-based", "distance-based"] }),
     field("fuelQuantity", "Fuel from surveys", { required: true, placeholder: "e.g. 15000", methods: ["fuel-based"] }),
     field("fuelUnit", "Fuel unit", { type: "select", required: true, options: ["Litres", "kWh"], methods: ["fuel-based"] }),
     field("employeesSurveyed", "Employees surveyed", { placeholder: "e.g. 80", methods: ["fuel-based", "distance-based"] }),
@@ -207,7 +223,13 @@ export const CATEGORY_FIELDS: Record<number, ActivityField[]> = {
   ],
 };
 
-export function fieldsFor(categoryId: number, method: string) {
+export function isFieldVisible(field: ActivityField, values?: Record<string, string>) {
+  const modes = field.visibleWhen?.mode;
+  if (!modes?.length) return true;
+  return modes.includes((values?.mode ?? "").trim());
+}
+
+export function fieldsFor(categoryId: number, method: string, values?: Record<string, string>) {
   const rows = (CATEGORY_FIELDS[categoryId] ?? []).filter((entry) => !entry.methods || entry.methods.includes(method));
   const extras: ActivityField[] = [];
   if (method === "hybrid") {
@@ -226,22 +248,26 @@ export function fieldsFor(categoryId: number, method: string) {
       }),
     );
   }
-  extras.push(
-    field("biogenicTco2e", "Biogenic CO₂ (tCO₂, reported separately)", {
-      optional: true,
-      placeholder: "e.g. 12.5 · reported separately, not added to scope 3 total",
-    }),
-  );
-  return [...rows, ...extras];
+  return [...rows, ...extras].filter((entry) => isFieldVisible(entry, values));
 }
 
 export function blankValues(categoryId: number): Record<string, string> {
   const ids = new Set((CATEGORY_FIELDS[categoryId] ?? []).map((entry) => entry.id));
   ids.add("primarySharePct");
   ids.add("fxRate");
-  ids.add("biogenicTco2e");
   ids.add("supplierEmail");
   return Object.fromEntries([...ids].map((id) => [id, ""]));
+}
+
+export function isYearField(field: Pick<ActivityField, "id" | "type">) {
+  return field.type === "year" || field.id === "yearAcquired";
+}
+
+export function displayFieldValue(field: ActivityField, value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "—";
+  if (isYearField(field)) return formatReportingYear(trimmed) || trimmed;
+  return trimmed;
 }
 
 export function itemLabel(values: Record<string, string>) {

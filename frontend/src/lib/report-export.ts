@@ -36,14 +36,9 @@ export const REPORT_INCLUDES = [
   "Exclusions with justification",
   "Data quality assessment",
   "Percent of emissions from supplier data",
-  "Biogenic CO₂ (reported separately)",
 ] as const;
 
 export type ReportInclude = (typeof REPORT_INCLUDES)[number];
-
-const INCLUDE_ALIASES: Record<string, ReportInclude> = {
-  "Emission factor by supplier": "Biogenic CO₂ (reported separately)",
-};
 
 export const BOUNDARY_COPY: Record<InventoryState["boundary"], { label: string; detail: string }> = {
   operational: {
@@ -120,7 +115,7 @@ function formatStamp(iso?: string) {
 }
 
 function selectedIncludes(includes: string[]) {
-  const normalized = new Set(includes.map((label) => INCLUDE_ALIASES[label] ?? label));
+  const normalized = new Set(includes);
   return (label: ReportInclude) => normalized.has(label);
 }
 
@@ -142,7 +137,6 @@ function activityRows(results: InventoryResult) {
       tco2e: item.tco2e,
       supplierTco2e: item.supplierTco2e,
       secondaryTco2e: item.secondaryTco2e,
-      biogenicTco2e: item.biogenicTco2e,
       complete: item.complete ? "Yes" : "No",
       supplierVerified: item.supplierVerified ? "Verified by supplier" : "Not verified",
       factor: item.factor ? `${item.factor.factor} ${item.factor.unit}` : "",
@@ -389,7 +383,7 @@ async function buildPdf(state: InventoryState, results: InventoryResult, include
       incomplete > 0 ? ` ${incomplete} item${incomplete === 1 ? " still needs" : "s still need"} required inputs.` : "";
     y = writeParagraph(
       doc,
-      `${state.companyName || "This company"} reports ${formatTco2e(results.totalTco2e)} tCO2e of scope 3 emissions for ${formatReportingYear(state.year) || "the reporting year"} under the ${boundary.label.toLowerCase()} approach. ${results.includedCount} of 15 GHG Protocol categories are included. Upstream ${formatTco2e(results.upstreamTco2e)} tCO2e; downstream ${formatTco2e(results.downstreamTco2e)} tCO2e. ${formatShare(results.supplierSharePct)} of the total is from supplier-verified data. Biogenic CO2 of ${formatTco2e(results.biogenicTco2e)} tCO2 is reported separately and is not included in the scope 3 total. ${completeness}${incompleteNote} ${hotspotLine(results)}${yoy}`,
+      `${state.companyName || "This company"} reports ${formatTco2e(results.totalTco2e)} tCO2e of scope 3 emissions for ${formatReportingYear(state.year) || "the reporting year"} under the ${boundary.label.toLowerCase()} approach. ${results.includedCount} of 15 GHG Protocol categories are included. Upstream ${formatTco2e(results.upstreamTco2e)} tCO2e; downstream ${formatTco2e(results.downstreamTco2e)} tCO2e. ${formatShare(results.supplierSharePct)} of the total is from supplier-verified data. ${completeness}${incompleteNote} ${hotspotLine(results)}${yoy}`,
       y,
       pageWidth,
     );
@@ -428,7 +422,7 @@ async function buildPdf(state: InventoryState, results: InventoryResult, include
     y = writeHeading(doc, "Methodology and assumptions", y);
     y = writeParagraph(
       doc,
-      "Each included category uses one GHG Protocol Technical Guidance method. Emissions are activity data x emission factor, converted to tCO2e. Spend in a foreign currency is converted at the reporting-year average rate unless an FX override is entered. Items missing required inputs or an emission factor are not calculated (0 tCO2e) and appear under Completeness. Biogenic CO2 is reported separately and is not in the scope 3 total. Emission factors keep the GWP values published by their source.",
+      "Each included category uses one GHG Protocol Technical Guidance method. Emissions are activity data x emission factor, converted to tCO2e. Spend in a foreign currency is converted at the reporting-year average rate unless an FX override is entered. Items missing required inputs or an emission factor are not calculated (0 tCO2e) and appear under Completeness. Emission factors keep the GWP values published by their source.",
       y,
       pageWidth,
     );
@@ -557,16 +551,6 @@ async function buildPdf(state: InventoryState, results: InventoryResult, include
     );
   }
 
-  if (want("Biogenic CO₂ (reported separately)")) {
-    y = writeHeading(doc, "Biogenic CO2 (reported separately)", y);
-    y = writeParagraph(
-      doc,
-      `${formatTco2e(results.biogenicTco2e)} tCO2 of biogenic carbon dioxide is reported separately and is not included in the ${formatTco2e(results.totalTco2e)} tCO2e scope 3 total.`,
-      y,
-      pageWidth,
-    );
-  }
-
   if (want("Data quality assessment")) {
     y = writeHeading(doc, "Data quality", y);
     y = writeParagraph(
@@ -626,7 +610,6 @@ async function buildExcel(state: InventoryState, results: InventoryResult, inclu
       ["Total tCO2e", results.totalTco2e],
       ["Upstream tCO2e", results.upstreamTco2e],
       ["Downstream tCO2e", results.downstreamTco2e],
-      ["Biogenic CO2 (reported separately)", results.biogenicTco2e],
       ["Supplier tCO2e (verified)", results.supplierTco2e],
       ["Unverified supplier tCO2e", results.unverifiedSupplierTco2e],
       ["Secondary tCO2e", results.secondaryTco2e],
@@ -659,7 +642,6 @@ async function buildExcel(state: InventoryState, results: InventoryResult, inclu
           Share: category.share,
           SupplierTco2e: category.supplierTco2e,
           SecondaryTco2e: category.secondaryTco2e,
-          BiogenicCO2: category.biogenicTco2e,
           CompleteItems: category.completeCount,
           Items: category.items.length,
         })),

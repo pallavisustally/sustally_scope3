@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { formatReportingYear } from "@/lib/reporting-year";
+import { formatReportingYear, reportingYearOptions } from "@/lib/reporting-year";
+import { isYearField } from "@/data/fields";
 import { SCOPE3_CATEGORIES } from "@/data/protocol";
 import {
   categoryName,
@@ -42,8 +43,10 @@ function publicPayload(row: NonNullable<Awaited<ReturnType<typeof loadPublic>>>,
     fields: publicActivityFields(row.categoryId, row.method).map((field) => ({
       id: field.id,
       label: field.label,
-      type: field.type,
-      options: field.options ?? [],
+      type: isYearField(field) ? "year" : field.type,
+      options: isYearField(field)
+        ? reportingYearOptions(values[field.id])
+        : (field.options ?? []).map((option) => ({ value: option, label: option })),
       placeholder: field.placeholder ?? "",
       value: values[field.id] ?? "",
     })),

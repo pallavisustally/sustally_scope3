@@ -20,9 +20,15 @@ const FACTORS = [
   { code: "c5-recycle", value: "21", unit: "kg CO2e / tonne", source: "DEFRA", year: "2024", region: "Global", factorType: "Recycling", categories: [5, 12] },
   { code: "c5-incineration", value: "21.3", unit: "kg CO2e / tonne", source: "DEFRA", year: "2024", region: "Global", factorType: "Incineration", categories: [5, 12] },
   { code: "c6-air", value: "0.156", unit: "kg CO2e / pkm", source: "DEFRA", year: "2024", region: "Global", factorType: "Short-haul economy", categories: [6] },
-  { code: "c6-rail", value: "0.035", unit: "kg CO2e / pkm", source: "DEFRA", year: "2024", region: "Global", factorType: "National rail", categories: [6, 7] },
-  { code: "c6-car", value: "0.171", unit: "kg CO2e / km", source: "DEFRA", year: "2024", region: "Global", factorType: "Average car", categories: [6, 7] },
+  { code: "c6-rail", value: "0.035", unit: "kg CO2e / pkm", source: "DEFRA", year: "2024", region: "Global", factorType: "National rail", categories: [6] },
+  { code: "c6-car", value: "0.171", unit: "kg CO2e / km", source: "DEFRA", year: "2024", region: "United Kingdom", factorType: "Average car", categories: [6] },
   { code: "eeio-travel", value: "0.18", unit: "kg CO2e / USD", source: "EEIO", year: "2023", region: "Global", factorType: "Travel spend", categories: [6] },
+  { code: "c7-car", value: "0.171", unit: "kg CO2e / km", source: "DEFRA", year: "2024", region: "Global", factorType: "Average car (unknown fuel)", categories: [7] },
+  { code: "c7-two-wheeler", value: "0.114", unit: "kg CO2e / km", source: "DEFRA", year: "2024", region: "Global", factorType: "Average motorcycle", categories: [7] },
+  { code: "c7-bus", value: "0.108", unit: "kg CO2e / pkm", source: "DEFRA", year: "2024", region: "Global", factorType: "Average local bus", categories: [7] },
+  { code: "c7-metro", value: "0.035", unit: "kg CO2e / pkm", source: "DEFRA", year: "2024", region: "Global", factorType: "National rail / metro", categories: [7] },
+  { code: "c7-walk-cycle", value: "0", unit: "kg CO2e / km", source: "GHG Protocol", year: "2024", region: "Global", factorType: "Walking and cycling", categories: [7] },
+  { code: "c7-wfh", value: "0", unit: "kg CO2e / km", source: "GHG Protocol", year: "2024", region: "Global", factorType: "No commute", categories: [7] },
   { code: "c7-avg", value: "1.40", unit: "tCO2e / employee", source: "US EPA", year: "2023", region: "Global", factorType: "Average commute", categories: [7] },
   { code: "c8-office", value: "85", unit: "kg CO2e / m²", source: "CRREM", year: "2024", region: "India", factorType: "Office energy", categories: [8, 13, 14] },
   { code: "c8-warehouse", value: "42", unit: "kg CO2e / m²", source: "CRREM", year: "2024", region: "India", factorType: "Warehouse energy", categories: [8, 9, 13, 14] },
@@ -35,9 +41,10 @@ const FACTORS = [
 ];
 
 export async function seedEmissionFactors(payload: Payload) {
-  const existing = await payload.find({ collection: "emission-factors", limit: 1 });
-  if (existing.totalDocs > 0) return;
+  const existing = await payload.find({ collection: "emission-factors", limit: 1000 });
+  const codes = new Set((existing.docs ?? []).map((row) => (typeof row.code === "string" ? row.code : "")));
   for (const factor of FACTORS) {
+    if (codes.has(factor.code)) continue;
     await payload.create({
       collection: "emission-factors",
       data: { ...factor, origin: "secondary" },

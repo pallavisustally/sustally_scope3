@@ -110,7 +110,9 @@ export function isCollectionSlug(value: string): value is CollectionSlug {
 export async function listEmissionFactors(): Promise<EmissionFactor[]> {
   const result = (await payloadRequest("/emission-factors?limit=1000&depth=0")) as { docs?: Array<Record<string, unknown>> };
   const mapped = (result.docs ?? []).map(mapFactor).filter((row): row is EmissionFactor => Boolean(row));
-  return mapped.length ? mapped : EMISSION_FACTORS;
+  if (!mapped.length) return EMISSION_FACTORS;
+  const ids = new Set(mapped.map((row) => row.id));
+  return [...mapped, ...EMISSION_FACTORS.filter((row) => !ids.has(row.id))];
 }
 
 export async function listInventories(ownerId: string, currentSessionKey?: string): Promise<SavedInventorySummary[]> {

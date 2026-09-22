@@ -149,15 +149,15 @@ export function CommuteSurveyPanel() {
       if (!response.ok) throw new Error(payload.error || "Could not apply the survey.");
       const items = payload.items ?? [];
       if (!items.length) throw new Error("No responses to apply yet.");
-      applyCommuteSurveyItems(id, items);
+      applyCommuteSurveyItems(id, items, latest?.headcount ?? (Number(headcount) || 0));
       pushNotice({
         id: "commute-survey-apply",
         title: "Commuting survey applied",
-        body: `${payload.stats?.responseCount ?? items.length} responses replaced the Category 7 rows. Distance-based is selected because the survey collected days, mode, and km. You can still switch method. Assign emission factors next.`,
+        body: `${payload.stats?.responseCount ?? items.length} responses replaced the Category 7 rows, grouped by travelling mode. Distance-based is selected. Each mode has its own emission factor.`,
         href: "/activity?cat=7",
         tone: "ok",
       });
-      setMessage("Survey totals replaced the rows below. Distance-based is selected because the survey collected days, mode, and km. Fuel-based and average-data stay available. Assign factors next.");
+      setMessage("Survey totals replaced the rows below, grouped by travelling mode. Each mode has its own emission factor. Fuel-based and average-data stay available.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not apply the survey.");
     } finally {
@@ -187,7 +187,7 @@ export function CommuteSurveyPanel() {
       ) : null}
       <form className="mt-5 grid gap-5 md:grid-cols-3" onSubmit={(event) => void create(event)}>
         <div className="field">
-          <label htmlFor="survey-headcount">Employees to scale to</label>
+          <label htmlFor="survey-headcount">Total employees</label>
           <input
             id="survey-headcount"
             inputMode="numeric"

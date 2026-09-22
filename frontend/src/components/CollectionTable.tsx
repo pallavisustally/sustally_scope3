@@ -5,6 +5,7 @@ import { useInventory } from "@/components/InventoryProvider";
 import { FooterNav, NoSelectedCategories, PageIntro } from "@/components/PageBits";
 import { IconPencil, IconTick } from "@/components/NavIcons";
 import { includedCategories, methodLabel } from "@/data/protocol";
+import { itemHasCalcInput, storedMethodItems } from "@/lib/inventory-method";
 
 function StepMark({ done, label, detail }: { done: boolean; label: string; detail: string }) {
   return (
@@ -32,7 +33,7 @@ export function CollectionTable() {
       <PageIntro
         kicker="Data collection"
         title="Activity data"
-        body="Open a category to choose a calculation method and enter activity data, then continue to emission factors. A tick appears after you save each step. Dashes mean that step is still empty."
+        body="Open a category to choose a calculation method, enter activity data, and pick an emission factor on each item. A tick appears after you save. Dashes mean that step is still empty."
       />
       <div className="panel collection-panel">
         <div className="collection-scroll">
@@ -51,8 +52,14 @@ export function CollectionTable() {
             <tbody>
               {selected.map((category) => {
                 const entry = state.entries[category.id];
-                const method = entry?.method ? methodLabel(category.id, entry.method) : "";
-                const itemCount = entry?.items.length ?? 0;
+                const methodGroups = entry
+                  ? storedMethodItems(entry).filter((group) => group.items.some(itemHasCalcInput))
+                  : [];
+                const method =
+                  methodGroups.map((group) => methodLabel(category.id, group.method)).filter(Boolean).join(" + ") ||
+                  (entry?.method ? methodLabel(category.id, entry.method) : "");
+                const itemCount = methodGroups.reduce((sum, group) => sum + group.items.filter(itemHasCalcInput).length, 0) ||
+                  (entry?.items.length ?? 0);
                 return (
                   <tr key={category.id}>
                     <td>

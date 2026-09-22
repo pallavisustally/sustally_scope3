@@ -4,12 +4,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { EMISSION_FACTORS, type EmissionFactor, type Inclusion } from "@/data/protocol";
 import { calculateInventory, type InventoryResult } from "@/lib/calculate";
 import { toCollectionDocs, type SavedInventorySummary } from "@/lib/collections-map";
+import { mergeCustomFactors } from "@/lib/custom-factor";
 import { emptyInventory, inventoryStorageKey, makeEntry, makeItem, newSessionKey } from "@/lib/inventory-defaults";
+import { switchCategoryMethod } from "@/lib/inventory-method";
 import { useCurrentUser } from "./CurrentUser";
-import type { CategoryStep, InventoryState } from "@/lib/inventory-types";
+import type { CategoryStep, CommuteRemainder, InventoryState } from "@/lib/inventory-types";
 import type { AppNotification } from "@/lib/notifications";
 import { inventoryNotifications } from "@/lib/notifications";
-import { mergeCommuteSurveyItems, type CommuteSurveyItemValues } from "@/lib/commute-survey";
+import { mergeCommuteSurveyItems, applySurveyRemainder, type CommuteSurveyItemValues } from "@/lib/commute-survey";
 import { clearVerificationOnEdit, mergeSupplierVerifications, type StoredSupplierVerification } from "@/lib/supplier-verify";
 
 export type { ActivityItem, CategoryEntry, CategoryStep, InventoryState } from "@/lib/inventory-types";
@@ -49,17 +51,19 @@ type InventoryContextValue = {
   setJustification: (id: number, value: string) => void;
   setActiveCategory: (id: number) => void;
   setCategoryMethod: (id: number, method: string) => void;
+  setCommuteSource: (source: "survey" | "manual") => void;
+  setCommuteRemainder: (remainder: CommuteRemainder, meta: { headcount: number; responseCount: number }) => void;
   updateItemValues: (categoryId: number, itemId: string, patch: Record<string, string>) => void;
   addItem: (categoryId: number) => void;
   removeItem: (categoryId: number, itemId: string) => void;
-  setItemFactor: (categoryId: number, itemId: string, factorId: string) => void;
-  setSecondaryFactor: (categoryId: number, itemId: string, factorId: string) => void;
+  setItemFactor: (categoryId: number, itemId: string, factorId: string, extraValues?: Record<string, string>) => void;
+  setSecondaryFactor: (categoryId: number, itemId: string, factorId: string, extraValues?: Record<string, string>) => void;
   markCategoryStep: (categoryId: number, step: CategoryStep) => void;
   openInventory: (sessionKey: string) => Promise<void>;
   newInventory: (mode?: "blank" | "next-year") => void;
   refreshInventories: () => Promise<void>;
   pushNotice: (notice: AppNotification) => void;
-  applyCommuteSurveyItems: (surveyId: string, items: CommuteSurveyItemValues[]) => void;
+  applyCommuteSurveyItems: (surveyId: string, items: CommuteSurveyItemValues[], headcount?: number) => void;
 };
 
 const InventoryContext = createContext<InventoryContextValue | null>(null);
@@ -75,7 +79,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [eventNotices, setEventNotices] = useState<AppNotification[]>([]);
   const skipSave = useRef(true);
 
-  const results = useMemo(() => calculateInventory(state, factors), [state, factors]);
+  const catalog = useMemo(() => mergeCustomFactors(factors, state), [factors, state]);
+  const results = useMemo(() => calculateInventory(state, catalog), [state, catalog]);
 
   const rememberSession = useCallback(
     (sessionKey: string) => {
@@ -280,7 +285,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       state,
-      factors,
+      factors: catalog,
       results,
       ready,
       syncStatus,
@@ -297,21 +302,46 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       setCategoryMethod: (id: number, method: string) =>
         setFull((current) => {
           const entry = current.entries[id] ?? makeEntry(id);
-          const items =
-            id === 7 && method === "average-data"
-              ? entry.items.map((item) => ({
-                  ...item,
-                  values: {
-                    ...item.values,
-                    headcount: item.values.headcount || item.values.employees,
-                  },
-                }))
-              : entry.items;
           return {
             ...current,
             entries: {
               ...current.entries,
-              [id]: { ...entry, method, items },
+              [id]: switchCategoryMethod(entry, id, method),
+            },
+          };
+        }),
+      setCommuteSource: (source: "survey" | "manual") =>
+        setFull((current) => {
+          const entry = switchCategoryMethod(current.entries[7] ?? makeEntry(7), 7, "distance-based");
+          const hasManual = entry.items.some((item) => !item.values.surveyId?.trim());
+          return {
+            ...current,
+            entries: {
+              ...current.entries,
+              7: {
+                ...entry,
+                commuteSource: source,
+                items: source === "manual" && !hasManual ? [...entry.items, makeItem(7, entry.items.length + 1, "distance-based")] : entry.items,
+              },
+            },
+          };
+        }),
+      setCommuteRemainder: (remainder: CommuteRemainder, meta: { headcount: number; responseCount: number }) =>
+        setFull((current) => {
+          const entry = switchCategoryMethod(current.entries[7] ?? makeEntry(7), 7, "distance-based");
+          const scaled = applySurveyRemainder(entry.items, remainder, meta.headcount, meta.responseCount);
+          const hasExtra = scaled.some((item) => !item.values.surveyId?.trim());
+          return {
+            ...current,
+            entries: {
+              ...current.entries,
+              7: {
+                ...entry,
+                commuteSource: "survey",
+                commuteRemainder: remainder,
+                activityDone: true,
+                items: remainder === "manual" && !hasExtra ? [...scaled, makeItem(7, scaled.length + 1, "distance-based")] : scaled,
+              },
             },
           };
         }),
@@ -345,7 +375,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
               ...current.entries,
               [categoryId]: {
                 ...entry,
-                items: [...entry.items, makeItem(categoryId, nextIndex)],
+                items: [...entry.items, makeItem(categoryId, nextIndex, entry.method)],
               },
             },
           };
@@ -362,7 +392,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             },
           };
         }),
-      setItemFactor: (categoryId: number, itemId: string, factorId: string) =>
+      setItemFactor: (categoryId: number, itemId: string, factorId: string, extraValues?: Record<string, string>) =>
         setFull((current) => {
           const entry = current.entries[categoryId] ?? makeEntry(categoryId);
           return {
@@ -371,12 +401,16 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
               ...current.entries,
               [categoryId]: {
                 ...entry,
-                items: entry.items.map((item) => (item.id === itemId ? { ...item, factorId } : item)),
+                items: entry.items.map((item) =>
+                  item.id === itemId
+                    ? { ...item, factorId, values: extraValues ? { ...item.values, ...extraValues } : item.values }
+                    : item,
+                ),
               },
             },
           };
         }),
-      setSecondaryFactor: (categoryId: number, itemId: string, factorId: string) =>
+      setSecondaryFactor: (categoryId: number, itemId: string, factorId: string, extraValues?: Record<string, string>) =>
         setFull((current) => {
           const entry = current.entries[categoryId] ?? makeEntry(categoryId);
           return {
@@ -385,7 +419,15 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
               ...current.entries,
               [categoryId]: {
                 ...entry,
-                items: entry.items.map((item) => (item.id === itemId ? { ...item, secondaryFactorId: factorId } : item)),
+                items: entry.items.map((item) =>
+                  item.id === itemId
+                    ? {
+                        ...item,
+                        secondaryFactorId: factorId,
+                        values: extraValues ? { ...item.values, ...extraValues } : item.values,
+                      }
+                    : item,
+                ),
               },
             },
           };
@@ -405,10 +447,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       newInventory,
       refreshInventories,
       pushNotice,
-      applyCommuteSurveyItems: (surveyId: string, items: CommuteSurveyItemValues[]) =>
-        setFull((current) => mergeCommuteSurveyItems(current, surveyId, items)),
+      applyCommuteSurveyItems: (surveyId: string, items: CommuteSurveyItemValues[], headcount?: number) =>
+        setFull((current) => mergeCommuteSurveyItems(current, surveyId, items, headcount)),
     }),
-    [state, factors, results, ready, syncStatus, savedInventories, notices, openInventory, newInventory, refreshInventories, pushNotice],
+    [state, catalog, results, ready, syncStatus, savedInventories, notices, openInventory, newInventory, refreshInventories, pushNotice],
   );
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;

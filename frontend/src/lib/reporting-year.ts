@@ -6,6 +6,8 @@ export const REPORTING_YEARS = [
   { value: "2022", label: "FY2022-23" },
 ] as const;
 
+export type YearOption = { value: string; label: string };
+
 export function reportingYearStart(year: string | number | null | undefined) {
   const raw = String(year ?? "").trim();
   if (!raw) return "";
@@ -23,4 +25,13 @@ export function formatReportingYear(year: string | number | null | undefined) {
   if (!Number.isFinite(start)) return raw;
   const end = String((start + 1) % 100).padStart(2, "0");
   return `FY${start}-${end}`;
+}
+
+export function reportingYearOptions(currentValue: string | number | null | undefined = ""): YearOption[] {
+  const options: YearOption[] = REPORTING_YEARS.map((year) => ({ value: year.value, label: year.label }));
+  const selected = reportingYearStart(currentValue);
+  if (selected && !options.some((year) => year.value === selected)) {
+    options.push({ value: selected, label: formatReportingYear(selected) });
+  }
+  return options;
 }

@@ -21,7 +21,7 @@ const STEPS = [
   {
     href: "/activity",
     label: "Data collection",
-    detail: "Open a category, pick a calculation method, enter activity data, then assign emission factors. Category 7 (employee commuting) has its own survey steps — see How to fill Category 7 below. For supplier-specific or hybrid rows, add an optional supplier email and send a confirmation.",
+    detail: "Open a category, pick a calculation method, enter activity data, and choose an emission factor on each item. Category 6 requires travel mode. Category 7 (employee commuting) has its own survey steps — see How to fill Category 7 below. For supplier-specific or hybrid rows, add an optional supplier email and send a confirmation.",
   },
   {
     href: "/activity/review",
@@ -47,7 +47,7 @@ const QUESTIONS = [
   },
   {
     q: "How does the commuting survey work?",
-    a: "Open Category 7 under Data collection and follow the four steps on that page. Create a link, share it with employees, apply the responses, then choose a calculation method. Fuel-based and average-data stay available after the survey. The full walkthrough is in How to fill Category 7 on this page.",
+    a: "Open Category 7 under Data collection. Choose a calculation method first. Distance-based then asks for a survey link or totals you enter. After you apply survey responses, choose how to treat employees who did not respond, then save. The full walkthrough is in How to fill Category 7 on this page.",
   },
   {
     q: "Why is Next locked on an activity form?",
@@ -125,14 +125,16 @@ export default function HelpPage() {
         </ol>
       </section>
 
-      <section id="category-7" className="panel help-flow help-cat7">
-        <h3>How to fill Category 7 · Employee commuting</h3>
+      <section id="category-6" className="panel help-flow help-cat7">
+        <h3>How to fill Category 6 · Business travel</h3>
         <p className="help-lede">
           Open{" "}
-          <Link href="/activity?cat=7" className="help-link">
-            Employee commuting
+          <Link href="/activity?cat=6" className="help-link">
+            Business travel
           </Link>{" "}
-          from Selected categories. Use the employee survey when you can. You can still pick Fuel-based or Average-data after the survey. Emission factors are assigned on the next page, not here.
+          from Selected categories. Use one row per travel mode. Travel mode is required. The emission factor follows the mode.
+          Air also needs haul length and cabin class. Hotel stays are not a travel mode; add a separate item if you quantify
+          overnight accommodation.
         </p>
         <ol>
           <li>
@@ -140,10 +142,65 @@ export default function HelpPage() {
               1
             </span>
             <div>
-              <p className="help-cat7-title">Employee commuting survey</p>
+              <p className="help-cat7-title">Calculation method</p>
+              <p>Fuel-based uses fuel by mode. Distance-based uses passenger-km or km by mode. Spend-based uses amount spent by mode.</p>
+            </div>
+          </li>
+          <li>
+            <span className="help-step" aria-hidden>
+              2
+            </span>
+            <div>
+              <p className="help-cat7-title">Travel mode</p>
+              <p>Choose Air, Rail, Car, Bus, Taxi, or Ferry. Add another item for another mode.</p>
+            </div>
+          </li>
+          <li>
+            <span className="help-step" aria-hidden>
+              3
+            </span>
+            <div>
+              <p className="help-cat7-title">Air haul and cabin</p>
               <p>
-                Enter how many employees to scale to, working weeks per year, and an optional close date. Create the campaign
-                and share the anonymous link. Responses do not change the inventory until you apply them.
+                For flights, haul length (domestic, short-haul, long-haul) and cabin class are required. Other modes hide those
+                fields.
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section id="category-7" className="panel help-flow help-cat7">
+        <h3>How to fill Category 7 · Employee commuting</h3>
+        <p className="help-lede">
+          Open{" "}
+          <Link href="/activity?cat=7" className="help-link">
+            Employee commuting
+          </Link>{" "}
+          from Selected categories. Start with a calculation method. Fuel-based is the default. Distance-based can use a survey or totals you enter. Survey responses are grouped by travelling mode, and each mode has its own emission factor.
+        </p>
+        <ol>
+          <li>
+            <span className="help-step" aria-hidden>
+              1
+            </span>
+            <div>
+              <p className="help-cat7-title">Calculation method</p>
+              <p>
+                Fuel-based is selected by default and opens the fuel form. Distance-based then asks whether to use a survey
+                link or enter commuting totals yourself. Average-data uses headcount.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span className="help-step" aria-hidden>
+              1
+            </span>
+            <div>
+              <p className="help-cat7-title">Survey link · Employee commuting survey</p>
+              <p>
+                After Distance-based and Survey link, create a campaign and share the anonymous link. Responses do not change
+                the inventory until you apply them.
               </p>
             </div>
           </li>
@@ -154,8 +211,9 @@ export default function HelpPage() {
             <div>
               <p className="help-cat7-title">Survey data applied</p>
               <p>
-                After people respond, apply the survey. That fills commuting groups from days, mode, and km. Those totals are
-                read-only. Do not re-enter group, mode, employees, distance, or commuting days.
+                Applied survey rows stay read-only except for the emission factor. This table shows the actual responses and
+                the tCO₂e from those responses only. Each mode is given a DEFRA commuting factor by default; you can change
+                it on that row.
               </p>
             </div>
           </li>
@@ -164,10 +222,14 @@ export default function HelpPage() {
               3
             </span>
             <div>
-              <p className="help-cat7-title">Calculation method</p>
+              <p className="help-cat7-title">Employees who did not respond</p>
               <p>
-                Distance-based is selected because the survey collected days, mode, and km. You can switch to Fuel-based or
-                Average-data. If you do, the extra fields open under this step, not in the survey totals.
+                This step is enabled only when some employees have not responded. None of the three options is selected
+                until you choose. Apply proportionally scales employees in a mode = total employees × (mode responses ÷ all
+                responses). One-way km and commuting days stay the respondent averages. Then CO₂e = employees × commuting
+                days × 2 × one-way km × emission factor. You can instead enter remaining groups manually, or continue with
+                the given responses only. Step 2 always shows the actual survey results. If everyone has responded, this
+                step stays closed and only the given responses are used.
               </p>
             </div>
           </li>
@@ -176,22 +238,9 @@ export default function HelpPage() {
               4
             </span>
             <div>
-              <p className="help-cat7-title">Other commuting groups</p>
-              <p>
-                Add a group that did not take the survey, such as contractors. Skip this step if the survey covers everyone
-                you need to report.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span className="help-step" aria-hidden>
-              5
-            </span>
-            <div>
               <p className="help-cat7-title">Save and continue</p>
               <p>
-                Continue opens emission factors for Category 7. Bind a factor to each commuting group there. Until a factor is
-                assigned, that group stays at 0 tCO₂e in Results.
+                Save returns to the selected categories list. Confirm the emission factor on each travel-mode group, or choose Enter your own emission factor. Calculation uses that factor × passenger-km (employees × commuting days × 2 × one-way km).
               </p>
             </div>
           </li>

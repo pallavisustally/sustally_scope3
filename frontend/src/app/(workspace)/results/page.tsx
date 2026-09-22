@@ -5,6 +5,7 @@ import { FooterNav, PageIntro } from "@/components/PageBits";
 import { ResultsCharts } from "@/components/ResultsCharts";
 import { useInventory } from "@/components/InventoryProvider";
 import type { CategoryResult } from "@/lib/calculate";
+import { methodLabel } from "@/data/protocol";
 import { formatShare, formatTco2e } from "@/lib/numbers";
 import { formatReportingYear } from "@/lib/reporting-year";
 
@@ -20,6 +21,7 @@ function StatusPill({ complete, total }: { complete: number; total: number }) {
 }
 
 function CategoryWorking({ category }: { category: CategoryResult }) {
+  const mixed = new Set(category.items.map((item) => item.method)).size > 1;
   return (
     <details className="results-detail" open={category.completeCount > 0}>
       <summary>
@@ -37,10 +39,13 @@ function CategoryWorking({ category }: { category: CategoryResult }) {
       <p className="results-formula">{category.methodFormula}</p>
       <div className="results-items">
         {category.items.map((item) => (
-          <div key={item.itemId} className="results-item" data-complete={item.complete ? "true" : "false"}>
+          <div key={`${item.method}-${item.itemId}`} className="results-item" data-complete={item.complete ? "true" : "false"}>
             <div className="results-item-head">
               <p>
                 {item.label}
+                {mixed ? (
+                  <span className="results-quiet ml-2">{methodLabel(category.id, item.method)}</span>
+                ) : null}
                 {item.supplierVerified ? (
                   <span className="status-pill ml-2" data-tone="ok">
                     Verified by supplier
@@ -66,7 +71,7 @@ function CategoryWorking({ category }: { category: CategoryResult }) {
               {item.complete ? (
                 <Link href={`/activity?cat=${category.id}`}>Edit inputs</Link>
               ) : (
-                <Link href={item.missing.includes("Emission factor") ? `/activity/factors?cat=${category.id}` : `/activity?cat=${category.id}`}>
+                <Link href={`/activity?cat=${category.id}`}>
                   Finish this item
                 </Link>
               )}
@@ -146,10 +151,6 @@ export default function ResultsPage() {
           <div>
             <dt>Supplier-specific (verified)</dt>
             <dd>{formatShare(results.supplierSharePct)}</dd>
-          </div>
-          <div>
-            <dt>Biogenic CO₂ (reported separately)</dt>
-            <dd>{formatTco2e(results.biogenicTco2e)} tCO₂</dd>
           </div>
         </dl>
       </article>

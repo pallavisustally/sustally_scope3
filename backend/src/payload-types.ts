@@ -163,7 +163,7 @@ export interface User {
   collection: 'users';
 }
 /**
- * Frontend sign-in accounts.
+ * Frontend sign-in accounts. Edit name, email, or phone; set a new password; or delete the user.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "app-users".
@@ -174,8 +174,12 @@ export interface AppUser {
   lastName: string;
   email: string;
   phone: string;
-  passwordHash: string;
-  passwordSalt: string;
+  /**
+   * Set or reset the sign-in password. Leave blank when editing to keep the current password. Hashes cannot be converted back to the original password.
+   */
+  password?: string | null;
+  passwordHash?: string | null;
+  passwordSalt?: string | null;
   resetTokenHash?: string | null;
   resetExpires?: number | null;
   updatedAt: string;
@@ -535,6 +539,7 @@ export interface AppUsersSelect<T extends boolean = true> {
   lastName?: T;
   email?: T;
   phone?: T;
+  password?: T;
   passwordHash?: T;
   passwordSalt?: T;
   resetTokenHash?: T;

@@ -1,6 +1,7 @@
 import { itemLabel } from "@/data/fields";
 import { SCOPE3_CATEGORIES, type Inclusion } from "@/data/protocol";
 import { emptyCategories, emptyInventory, makeEntry } from "@/lib/inventory-defaults";
+import { storedMethodItems } from "@/lib/inventory-method";
 import type { CategoryEntry, InventoryState } from "@/lib/inventory-types";
 
 export type CollectionDoc = {
@@ -39,7 +40,14 @@ function text(value: unknown) {
   return typeof value === "string" ? value : value == null ? "" : String(value);
 }
 
-const STEP_VALUE_KEYS = ["__activityDone", "__methodDone", "__factorsDone"] as const;
+const STEP_VALUE_KEYS = [
+  "__activityDone",
+  "__methodDone",
+  "__factorsDone",
+  "__commuteSource",
+  "__commuteRemainder",
+  "__activeMethod",
+] as const;
 
 function flagFrom(value: unknown) {
   return value === true || value === "1" || value === "true";
@@ -56,6 +64,9 @@ function entrySteps(entry: CategoryEntry) {
     __activityDone: entry.activityDone ? "1" : "",
     __methodDone: entry.methodDone ? "1" : "",
     __factorsDone: entry.factorsDone ? "1" : "",
+    __commuteSource: entry.commuteSource ?? "",
+    __commuteRemainder: entry.commuteRemainder ?? "",
+    __activeMethod: entry.method,
   };
 }
 
@@ -83,20 +94,22 @@ export function toCollectionDocs(
       justification: state.justifications[category.id] ?? "",
     })),
     "activity-items": Object.entries(state.entries).flatMap(([categoryId, entry]) =>
-      entry.items.map((item) => ({
-        id: item.id,
-        company: "current",
-        categoryId: Number(categoryId),
-        method: entry.method,
-        factorId: item.factorId,
-        factorCodeSecondary: item.secondaryFactorId,
-        item: itemLabel(item.values),
-        quantity: item.values.quantity ?? item.values.energyQuantity ?? item.values.fuelQuantity ?? "",
-        unit: item.values.unit ?? item.values.energyUnit ?? item.values.fuelUnit ?? "",
-        spend: item.values.spend ?? "",
-        supplier: item.values.supplier ?? "",
-        values: { ...item.values, secondaryFactorId: item.secondaryFactorId, ...entrySteps(entry) },
-      })),
+      storedMethodItems(entry).flatMap(({ method, items }) =>
+        items.map((item) => ({
+          id: item.id,
+          company: "current",
+          categoryId: Number(categoryId),
+          method,
+          factorId: item.factorId,
+          factorCodeSecondary: item.secondaryFactorId,
+          item: itemLabel(item.values),
+          quantity: item.values.quantity ?? item.values.energyQuantity ?? item.values.fuelQuantity ?? "",
+          unit: item.values.unit ?? item.values.energyUnit ?? item.values.fuelUnit ?? "",
+          spend: item.values.spend ?? "",
+          supplier: item.values.supplier ?? "",
+          values: { ...item.values, secondaryFactorId: item.secondaryFactorId, ...entrySteps(entry) },
+        })),
+      ),
     ),
     "inventory-results": extras
       ? [
@@ -143,38 +156,62 @@ export function stateFromPayload(input: {
   state.justifications = justifications;
 
   const grouped = new Map<number, CategoryEntry>();
+  const activeByCategory = new Map<number, string>();
   for (const row of input.items ?? []) {
     const categoryId = Number(row.categoryId);
     if (!Number.isFinite(categoryId)) continue;
     const existing = grouped.get(categoryId) ?? {
       method: text(row.method) || "average-data",
       items: [],
+      itemsByMethod: {},
       activityDone: false,
       methodDone: false,
       factorsDone: false,
     };
-    existing.method = text(row.method) || existing.method;
-    const index = existing.items.length + 1;
+    const method = text(row.method) || existing.method;
+    const index = (existing.itemsByMethod?.[method]?.length ?? 0) + 1;
     const values = asRecord(row.values);
+    const activeMethod = text(values.__activeMethod);
+    if (activeMethod) activeByCategory.set(categoryId, activeMethod);
+    const source = text(row.commuteSource) || values.__commuteSource;
+    if (source === "survey" || source === "manual") existing.commuteSource = source;
+    const remainder = text(row.commuteRemainder) || values.__commuteRemainder;
+    if (remainder === "proportional" || remainder === "manual" || remainder === "responses-only") {
+      existing.commuteRemainder = remainder;
+    }
     const secondaryFactorId = text(row.factorCodeSecondary) || values.secondaryFactorId || "";
     existing.activityDone = existing.activityDone || flagFrom(row.activityDone) || flagFrom(values.__activityDone);
     existing.methodDone = existing.methodDone || flagFrom(row.methodDone) || flagFrom(values.__methodDone);
     existing.factorsDone = existing.factorsDone || flagFrom(row.factorsDone) || flagFrom(values.__factorsDone);
     delete values.secondaryFactorId;
-    existing.items.push({
-      id: text(row.clientItemId) || text(row.id) || `c${categoryId}-${index}`,
+    const id = text(row.clientItemId) || text(row.id) || `c${categoryId}-${method}-${index}`;
+    const item = {
+      id,
       factorId: text(row.factorCode ?? row.factorId),
       secondaryFactorId,
       values: stripStepValues(values),
-    });
+    };
+    const prior = existing.itemsByMethod?.[method] ?? [];
+    existing.itemsByMethod = {
+      ...existing.itemsByMethod,
+      [method]: [...prior.filter((row) => row.id !== item.id), item],
+    };
     grouped.set(categoryId, existing);
   }
 
   const entries: Record<number, CategoryEntry> = {};
   for (const category of SCOPE3_CATEGORIES) {
     const loaded = grouped.get(category.id);
-    if (loaded?.items.length) entries[category.id] = loaded;
-    else if (categories[category.id] === "included") entries[category.id] = makeEntry(category.id);
+    const stored = Object.entries(loaded?.itemsByMethod ?? {}).filter(([, rows]) => rows.length);
+    if (loaded && stored.length) {
+      const preferred = activeByCategory.get(category.id);
+      const method = preferred && loaded.itemsByMethod?.[preferred]?.length ? preferred : stored[stored.length - 1][0];
+      entries[category.id] = {
+        ...loaded,
+        method,
+        items: loaded.itemsByMethod?.[method] ?? stored[0][1],
+      };
+    } else if (categories[category.id] === "included") entries[category.id] = makeEntry(category.id);
   }
   state.entries = entries;
 

@@ -1,6 +1,7 @@
-import { type ActivityField, fieldsFor } from "@/data/fields";
+import { type ActivityField, fieldsFor, isYearField, itemLabel } from "@/data/fields";
 import type { ActivityItem, CategoryEntry } from "@/lib/inventory-types";
 import { parseAmount } from "@/lib/numbers";
+import { reportingYearStart } from "@/lib/reporting-year";
 
 const NUMBER_FIELDS = new Set([
   "quantity",
@@ -35,8 +36,6 @@ const NUMBER_FIELDS = new Set([
   "investmentValue",
   "primarySharePct",
   "fxRate",
-  "biogenicTco2e",
-  "yearAcquired",
 ]);
 
 const TEXT_FIELDS = new Set([
@@ -71,15 +70,15 @@ export function isRequiredField(field: ActivityField) {
 }
 
 export function isNumberField(field: ActivityField) {
-  return field.type !== "select" && NUMBER_FIELDS.has(field.id);
+  return field.type !== "select" && field.type !== "year" && !isYearField(field) && NUMBER_FIELDS.has(field.id);
 }
 
 export function isTextField(field: ActivityField) {
-  return field.type !== "select" && TEXT_FIELDS.has(field.id);
+  return field.type !== "select" && field.type !== "year" && !isYearField(field) && TEXT_FIELDS.has(field.id);
 }
 
 function skipEmptyRequired(field: ActivityField, method: string, values: Record<string, string>) {
-  if (field.id === "biogenicTco2e" || field.id === "fxRate") return true;
+  if (field.id === "fxRate") return true;
   if (method !== "hybrid") return false;
   const share = parseAmount(values.primarySharePct);
   if (field.id === "quantity" || field.id === "unit") return share === 0;
@@ -93,6 +92,14 @@ export function validateField(field: ActivityField, value: string, method: strin
 
   if (!trimmed) return required ? `${field.label} is required` : null;
 
+  if (isYearField(field)) {
+    const start = Number(reportingYearStart(trimmed));
+    if (!Number.isInteger(start) || start < 1900 || start > 2100) {
+      return "Select a valid year";
+    }
+    return null;
+  }
+
   if (isNumberField(field) || (field.type === "text" && NUMBER_FIELDS.has(field.id))) {
     const amount = parseAmount(trimmed);
     if (amount == null || !NUMBER_ONLY.test(trimmed.replace(/,/g, ""))) {
@@ -100,9 +107,6 @@ export function validateField(field: ActivityField, value: string, method: strin
     }
     if (PERCENT_FIELDS.has(field.id) && (amount < 0 || amount > 100)) {
       return `${field.label} must be between 0 and 100`;
-    }
-    if (field.id === "yearAcquired" && (amount < 1900 || amount > 2100 || !Number.isInteger(amount))) {
-      return "Enter a valid year";
     }
     if (field.id !== "fxRate" && amount < 0) return `${field.label} cannot be negative`;
     return null;
@@ -125,11 +129,10 @@ export function validateItemValues(fields: ActivityField[], values: Record<strin
 }
 
 export function validateActivityItems(categoryId: number, method: string, items: ActivityItem[]) {
-  const fields = fieldsFor(categoryId, method);
   return items.map((item, index) => ({
     id: item.id,
     index,
-    errors: validateItemValues(fields, item.values, method),
+    errors: validateItemValues(fieldsFor(categoryId, method, item.values), item.values, method),
   }));
 }
 
@@ -179,11 +182,13 @@ export function factorGaps(entry: CategoryEntry, categoryId?: number) {
       const needs = hybridFactorNeeds(item);
       if (needs.supplier && !item.factorId) missing.push("a supplier-specific factor");
       if (needs.secondary && !item.secondaryFactorId) {
-        missing.push("a secondary factor for the remaining share (switch the bind slot, then pick another row)");
+        missing.push("a secondary factor for the remaining share");
       }
     } else if (!item.factorId) {
       missing.push("an emission factor");
     }
-    return missing.length ? [`Item ${index + 1} needs ${missing.join(" and ")}`] : [];
+    const name = item.values.mode?.trim() || itemLabel(item.values);
+    const label = name && name !== "Untitled item" ? name : `Item ${index + 1}`;
+    return missing.length ? [`${label} needs ${missing.join(" and ")}`] : [];
   });
 }

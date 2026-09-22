@@ -9,12 +9,18 @@ export type ActivityItem = {
 
 export type CategoryStep = "activity" | "method" | "factors";
 
+export type CommuteSource = "survey" | "manual";
+export type CommuteRemainder = "proportional" | "manual" | "responses-only";
+
 export type CategoryEntry = {
   method: string;
   items: ActivityItem[];
+  itemsByMethod?: Record<string, ActivityItem[]>;
   activityDone?: boolean;
   methodDone?: boolean;
   factorsDone?: boolean;
+  commuteSource?: CommuteSource;
+  commuteRemainder?: CommuteRemainder;
 };
 
 export type InventoryState = {

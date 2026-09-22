@@ -74,15 +74,15 @@ export const CATEGORY_FORMULAS: Record<number, CategoryFormula> = {
     headline: "CO₂e = Σ (business travel activity × EF)",
     methods: [
       { label: "Fuel-based", formula: "Σ (fuel used by travel mode × fuel EF)" },
-      { label: "Distance-based", formula: "Σ (distance × mode/class EF)  =  Σ (pkm × EF)" },
-      { label: "Spend-based", formula: "Σ (amount spent by travel mode × EEIO EF)" },
+      { label: "Distance-based", formula: "Σ (distance × mode EF); air uses haul length and cabin class" },
+      { label: "Spend-based", formula: "Σ (amount spent by travel mode × mode EEIO EF)" },
     ],
   },
   7: {
     headline: "CO₂e = Σ (employee commuting activity × EF)",
     methods: [
       { label: "Fuel-based", formula: "Σ (survey fuel use × fuel EF)" },
-      { label: "Distance-based", formula: "Σ (employees × commuting days × 2 × one-way km × mode EF)" },
+      { label: "Distance-based", formula: "Σ (scaled employees × commuting days × 2 × one-way km × mode EF). Scaled employees = headcount × (mode responses ÷ all responses) when remaining people are applied proportionally." },
       { label: "Average-data", formula: "Σ (headcount × average commute EF)" },
     ],
   },

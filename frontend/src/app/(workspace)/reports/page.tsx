@@ -182,9 +182,6 @@ export default function ReportsPage() {
             {results.completeItems}/{results.totalItems || 0} items complete ({results.completenessPct}%) · verified supplier share{" "}
             {formatShare(results.supplierSharePct)}
           </p>
-          <p className="mt-2 text-[13px] text-[#d9d0f0]">
-            Biogenic CO₂ {formatTco2e(results.biogenicTco2e)} tCO₂ reported separately
-          </p>
           {priorYears.length >= 2 ? (
             <p className="mt-2 text-[13px] text-[#d9d0f0]">
               {priorYears.length} reporting years available for comparison

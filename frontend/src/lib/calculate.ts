@@ -3,7 +3,9 @@ import { formulaFor } from "@/data/formulas";
 import { EMISSION_FACTORS, SCOPE3_CATEGORIES, type EmissionFactor } from "@/data/protocol";
 import { aggregateDqa, dqaPercent, scoreItemDqa, type DqaScores } from "@/lib/data-quality";
 import { convertSpend, factorCurrency, isSpendFactor } from "@/lib/fx";
-import type { ActivityItem, InventoryState } from "@/lib/inventory-types";
+import { itemsForCommuteCalc } from "@/lib/commute-survey";
+import { itemHasCalcInput, storedMethodItems } from "@/lib/inventory-method";
+import type { ActivityItem, CategoryEntry, InventoryState } from "@/lib/inventory-types";
 import { isSupplierVerified } from "@/lib/supplier-verify";
 import {
   factorDenominator,
@@ -111,7 +113,8 @@ function activityLead(values: Record<string, string>) {
     return `Activity: ${values.productMass} ${values.massUnit || "t"} × ${values.distance} ${values.distanceUnit || "km"}`;
   }
   if (values.employees && values.oneWayKm && values.commutingDays) {
-    return `Activity: ${values.employees} employees × ${values.commutingDays} days × 2 × ${values.oneWayKm} km`;
+    const mode = values.mode ? ` (${values.mode})` : "";
+    return `Activity: ${values.employees} employees × ${values.commutingDays} days × 2 × ${values.oneWayKm} km${mode}`;
   }
   if (values.unitsSold && values.lifetimeYears) {
     const intensity = values.intensity || values.indirectIntensity;
@@ -181,14 +184,17 @@ const CALC_INPUT_IDS = new Set([
   "investmentValue",
   "primarySharePct",
   "numberOfFranchises",
+  "mode",
+  "haulLength",
+  "cabinClass",
 ]);
 
 function requiredFieldGaps(categoryId: number, method: string, values: Record<string, string>): string[] {
   const share = parseAmount(values.primarySharePct);
-  return fieldsFor(categoryId, method)
+  return fieldsFor(categoryId, method, values)
     .filter((field) => field.required && !field.optional && CALC_INPUT_IDS.has(field.id))
     .filter((field) => {
-      if (field.id === "biogenicTco2e" || field.id === "fxRate" || field.id === "secondaryFactorId") return false;
+      if (field.id === "fxRate" || field.id === "secondaryFactorId") return false;
       if (method === "hybrid" && (field.id === "spend" || field.id === "currency" || field.id === "fxRate")) return false;
       if (method === "hybrid" && share === 0 && (field.id === "quantity" || field.id === "unit")) return false;
       if (method === "hybrid" && share === 100 && (field.id === "spend" || field.id === "currency")) return false;
@@ -510,7 +516,7 @@ export function calculateItem(
   const missing = requiredFieldGaps(categoryId, method, item.values);
   const factor = factorById(item.factorId, ctx.catalog);
   const secondaryFactor = factorById(item.secondaryFactorId, ctx.catalog);
-  let biogenicTco2e = Math.max(0, parseAmount(item.values.biogenicTco2e) ?? 0);
+  const biogenicTco2e = 0;
   let tco2e = 0;
   let supplierTco2e = 0;
   let secondaryTco2e = 0;
@@ -561,10 +567,9 @@ export function calculateItem(
     tco2e = 0;
     supplierTco2e = 0;
     secondaryTco2e = 0;
-    biogenicTco2e = 0;
     steps = [`Not calculated: ${uniqueMissing.join(", ") || "missing inputs"}`];
   }
-  const requiredCount = fieldsFor(categoryId, method).filter((field) => field.required && !field.optional).length;
+  const requiredCount = fieldsFor(categoryId, method, item.values).filter((field) => field.required && !field.optional).length;
   const supplierVerified = isSupplierVerified(item.values);
   const dqa = scoreItemDqa({
     method,
@@ -598,23 +603,40 @@ export function calculateItem(
   };
 }
 
+function methodGroupsForCalc(categoryId: number, entry: CategoryEntry) {
+  const groups = storedMethodItems(entry).map(({ method, items }) => {
+    const scoped =
+      categoryId === 7 && method === "distance-based"
+        ? itemsForCommuteCalc({ ...entry, method, items })
+        : items;
+    return { method, items: scoped.filter(itemHasCalcInput) };
+  }).filter((group) => group.items.length);
+  if (groups.length) return groups;
+  const fallback = (categoryId === 7 ? itemsForCommuteCalc(entry) : entry.items).filter(itemHasCalcInput);
+  return fallback.length ? [{ method: entry.method, items: fallback }] : [];
+}
+
 export function calculateInventory(state: InventoryState, catalog: EmissionFactor[] = EMISSION_FACTORS): InventoryResult {
   const ctx: CalcContext = { catalog, reportingYear: state.year, hq: state.hq };
   const included = SCOPE3_CATEGORIES.filter((category) => state.categories[category.id] === "included");
   const categories: CategoryResult[] = included.map((category) => {
     const entry = state.entries[category.id];
-    const method = entry?.method ?? "";
-    const formula = formulaFor(category.id, method);
-    const items = (entry?.items ?? []).map((item) => calculateItem(category.id, method, item, ctx));
+    const groups = entry ? methodGroupsForCalc(category.id, entry) : [];
+    const method = groups.length === 1 ? groups[0].method : groups.map((group) => group.method).join(",") || entry?.method || "";
+    const formulas = groups.map((group) => formulaFor(category.id, group.method));
+    const formula = formulas[0] ?? formulaFor(category.id, entry?.method ?? "");
+    const items = groups.flatMap((group) =>
+      group.items.map((item) => calculateItem(category.id, group.method, item, ctx)),
+    );
     const tco2e = items.reduce((sum, item) => sum + item.tco2e, 0);
     return {
       id: category.id,
       name: category.name,
       stream: category.stream,
       method,
-      methodLabel: formula.methodLabel,
+      methodLabel: [...new Set(formulas.map((row) => row.methodLabel).filter(Boolean))].join(" + ") || formula.methodLabel,
       formula: formula.headline,
-      methodFormula: formula.methodFormula,
+      methodFormula: [...new Set(formulas.map((row) => row.methodFormula))].join(" · ") || formula.methodFormula,
       tco2e,
       supplierTco2e: items.reduce((sum, item) => sum + item.supplierTco2e, 0),
       secondaryTco2e: items.reduce((sum, item) => sum + item.secondaryTco2e, 0),

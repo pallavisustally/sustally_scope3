@@ -172,7 +172,7 @@ export function useCommuteSurvey() {
     if (!response.ok) throw new Error(payload.error || "Could not apply the survey.");
     const items = payload.items ?? [];
     if (!items.length) throw new Error("No responses to apply yet.");
-    applyCommuteSurveyItems(id, items);
+    applyCommuteSurveyItems(id, items, latest?.headcount ?? (Number(headcount) || 0));
     await load();
     return { items, stats: payload.stats };
   };
@@ -185,11 +185,11 @@ export function useCommuteSurvey() {
       pushNotice({
         id: "commute-survey-apply",
         title: "Commuting survey applied",
-        body: `${result.stats?.responseCount ?? result.items.length} responses replaced the Category 7 rows. Distance-based is selected because the survey collected days, mode, and km.`,
+        body: `${result.stats?.responseCount ?? result.items.length} responses replaced the Category 7 rows, grouped by travelling mode. Each mode has its own emission factor.`,
         href: "/activity?cat=7",
         tone: "ok",
       });
-      setMessage("Survey totals are applied below.");
+      setMessage("Survey totals are grouped by travelling mode below. Each mode has its own emission factor.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not apply the survey.");
     } finally {

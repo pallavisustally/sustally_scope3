@@ -24,7 +24,7 @@ export function inventoryNotifications(state: InventoryState, results: Inventory
       id: "missing-factors",
       title: "Emission factors unbound",
       body: `${missingFactors.length} activity item${missingFactors.length === 1 ? "" : "s"} still need a factor before emissions calculate.`,
-      href: "/activity/factors",
+      href: "/activity",
       tone: "warn",
     });
   }

@@ -1,8 +1,8 @@
 "use client";
 
 import { FooterNav, PageIntro } from "@/components/PageBits";
+import { ReportingYearSelect } from "@/components/ReportingYearSelect";
 import { useInventory } from "@/components/InventoryProvider";
-import { formatReportingYear, REPORTING_YEARS } from "@/lib/reporting-year";
 
 const INDUSTRIES = ["Manufacturing", "Energy", "Retail", "Technology", "Financial services", "Other"];
 
@@ -49,17 +49,7 @@ export default function CompanyPage() {
           </div>
           <div className="field">
             <label htmlFor="year">Reporting year</label>
-            <select id="year" value={state.year} onChange={(e) => setState({ year: e.target.value })}>
-              <option value="">Select year</option>
-              {REPORTING_YEARS.map((year) => (
-                <option key={year.value} value={year.value}>
-                  {year.label}
-                </option>
-              ))}
-              {state.year && !REPORTING_YEARS.some((year) => year.value === state.year) ? (
-                <option value={state.year}>{formatReportingYear(state.year)}</option>
-              ) : null}
-            </select>
+            <ReportingYearSelect id="year" value={state.year} onChange={(year) => setState({ year })} />
           </div>
         </div>
         <fieldset className="mt-6">
